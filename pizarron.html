@@ -618,7 +618,7 @@
   <span class="session-id" id="spaceLabel" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">General</span>
   <div class="session-id" id="sessionId">SES-XXXXXX</div>
   <div class="days-badge" id="daysBadge">📅 día 1</div>
-  <div class="users-count">👥 <strong id="userCount">1</strong> en sesión</div>
+  <div class="users-count" title="Quien ha abierto este enlace en este navegador (sin servidor no hay lista en vivo)">👥 <strong id="userCount">1</strong> en sesión</div>
   <span class="username-display" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
   <div class="spacer"></div>
   <button class="btn" onclick="organizeCardsInGrid()">Organizar</button>
@@ -653,8 +653,8 @@
       <div class="manual-body" id="manualBody">
         <p>Hola, <strong id="manualUserName">Usuario</strong>.</p>
         <p>Este es el <strong>Pizarrón Grupo EPEM</strong>: un tablero colaborativo para compartir código y archivos por departamento.</p>
-        <p><strong>¿Cómo usarlo?</strong> Usa la barra lateral para cambiar de espacio (General, Soporte, Desarrollo, etc.). Pega código con <strong>Ctrl+V</strong> o arrastra archivos al tablero. El botón <strong>+</strong> abre el explorador para agregar más. Puedes mover las tarjetas arrastrándolas, descargar con «↓ descargar» y organizar con el botón <strong>Organizar</strong>. Comparte el enlace con <strong>Compartir</strong> para que otros se unan a la misma sesión.</p>
-        <p><strong>Tip:</strong> El color del tablero cambia según el lenguaje más usado en las tarjetas.</p>
+        <p><strong>¿Cómo usarlo?</strong> Usa la barra lateral para cambiar de espacio (General, Soporte, Desarrollo, etc.). Pega código con <strong>Ctrl+V</strong> o arrastra archivos al tablero. El botón <strong>+</strong> abre el explorador para agregar más. Puedes mover las tarjetas arrastrándolas, descargar con «↓ descargar» y organizar con el botón <strong>Organizar</strong>. Las tarjetas se guardan en este navegador al recargar. Comparte el enlace con <strong>Compartir</strong> para que otros abran la misma sesión (cada uno ve sus propias tarjetas hasta que haya un servidor en tiempo real).</p>
+        <p><strong>Tip:</strong> El color del tablero cambia según el lenguaje más usado. Si pegar no funciona, usa el botón +.</p>
         <div class="manual-mascota">
           <p><strong>Nuestra mascota</strong> es <span class="pet-name-ref">GUSSI</span>: un bichito pixelado que vive en la esquina del pizarrón. Sube de nivel cuando compartes contenido (una vez por día), reacciona cuando pegas código, se duerme si no hay actividad y celebra cuando descargas algo. ¡Cuídala!</p>
         </div>
@@ -1120,6 +1120,8 @@ function updateAccentFromBoard() {
 let cardCounter = 0;
 const cards = {};
 const PAD = 16;
+const CARDS_STORAGE_KEY = 'pz_cards_' + SESSION_ID;
+const MAX_STORED_FILE_SIZE = 800 * 1024; // 800KB por archivo para no llenar localStorage
 const CELL_W = 280;
 const CELL_H = 300;
 const CARD_GAP = 12;
@@ -1164,6 +1166,87 @@ function getNextGridPosition() {
   const x = PAD + (Math.random() * Math.max(0, vw - 320));
   const y = PAD + (Math.random() * Math.max(0, vh - 200));
   return { x, y };
+}
+
+function saveCardsToStorage() {
+  try {
+    const list = [];
+    Object.keys(cards).forEach(id => {
+      const c = cards[id];
+      const el = document.getElementById(id);
+      const left = el ? (parseInt(el.style.left, 10) || 0) : 0;
+      const top = el ? (parseInt(el.style.top, 10) || 0) : 0;
+      let content = c.content;
+      if (c.type === 'file' && typeof content === 'string' && content.length > MAX_STORED_FILE_SIZE)
+        content = null;
+      list.push({ id, content, type: c.type, meta: c.meta, left, top });
+    });
+    localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError') {
+      try {
+        const list = [];
+        Object.keys(cards).forEach(id => {
+          const c = cards[id];
+          if (c.type !== 'code') return;
+          const el = document.getElementById(id);
+          const left = el ? (parseInt(el.style.left, 10) || 0) : 0;
+          const top = el ? (parseInt(el.style.top, 10) || 0) : 0;
+          list.push({ id, content: c.content, type: c.type, meta: c.meta, left, top });
+        });
+        localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(list));
+      } catch (e2) {}
+    }
+  }
+}
+
+function loadCardsFromStorage() {
+  try {
+    const raw = localStorage.getItem(CARDS_STORAGE_KEY);
+    if (!raw) return false;
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list) || list.length === 0) return false;
+    const inner = document.getElementById('canvasInner');
+    list.forEach(item => {
+      const id = item.id;
+      const num = parseInt(id.replace('card-', ''), 10);
+      if (num > cardCounter) cardCounter = num;
+      cards[id] = { content: item.content, type: item.type, meta: item.meta || {} };
+      const meta = cards[id].meta;
+      meta.space = meta.space || 'general';
+      const left = (item.left != null ? item.left : PAD) + 'px';
+      const top = (item.top != null ? item.top : PAD) + 'px';
+      const userNameEsc = esc(meta.userName || 'Anónimo');
+      const createdAt = (meta.createdAt != null) ? meta.createdAt : new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+      let header = '', body = '', footer = '';
+      if (item.type === 'code') {
+        const det = meta.detected || { lang: 'txt', label: 'Texto' };
+        header = '<span class="card-lang lang-' + det.lang + '">' + det.label + '</span><span class="card-filename">' + esc(meta.filename || '') + '</span><div class="card-actions"><button class="card-btn" onclick="copyCard(\'' + id + '\')" title="Copiar">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
+        body = '<pre>' + (item.content ? highlightCode(item.content, det.lang) : esc('')) + '</pre>';
+        footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadCard(\'' + id + '\')">↓ descargar</button>';
+      } else {
+        const fnEsc = esc(meta.name || 'archivo');
+        header = '<span class="card-lang lang-file">ARCHIVO</span><span class="card-filename">' + fnEsc + '</span><div class="card-actions"><button class="card-btn" onclick="copyFileCard(\'' + id + '\')" title="Copiar nombre">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
+        body = '<div style="text-align:center;padding:8px 0"><span class="file-icon">' + getFileIcon(meta.ext) + '</span><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
+        footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadFileCard(\'' + id + '\')">↓ descargar</button>';
+      }
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.id = id;
+      div.dataset.space = meta.space;
+      div.style.left = left;
+      div.style.top = top;
+      div.style.display = meta.space === currentSpace ? '' : 'none';
+      div.innerHTML = '<div class="card-header">' + header + '</div><div class="card-body">' + body + '</div><div class="card-footer">' + footer + '</div>';
+      inner.appendChild(div);
+      makeDraggable(div);
+    });
+    updateSpaceBadges();
+    updateAccentFromBoard();
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 function organizeCardsInGrid() {
@@ -1217,6 +1300,7 @@ function createCard(content, type, meta = {}) {
   div.style.display = meta.space === currentSpace ? '' : 'none';
 
   const createdAt = new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  meta.createdAt = createdAt;
   let header='', body='', footer='';
 
   if (type === 'code') {
@@ -1264,7 +1348,8 @@ function createCard(content, type, meta = {}) {
   setTimeout(() => div.classList.remove('card-pulse'), 2200);
   updateSpaceBadges();
   updateAccentFromBoard();
-  showToast(`${userName} agregó en ${spaceName}`);
+  saveCardsToStorage();
+  showToast(userName + ' agregó en ' + spaceName);
   return id;
 }
 
@@ -1300,10 +1385,31 @@ function formatSize(b) {
 
 function removeCard(id) {
   const el = document.getElementById(id);
-  if (el) { el.style.transition='all 0.2s'; el.style.transform='scale(0.8)'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); updateSpaceBadges(); updateAccentFromBoard(); },200); delete cards[id]; }
+  if (el) { el.style.transition='all 0.2s'; el.style.transform='scale(0.8)'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); updateSpaceBadges(); updateAccentFromBoard(); saveCardsToStorage(); },200); delete cards[id]; }
 }
 function copyCard(id) {
-  if(cards[id]) navigator.clipboard.writeText(cards[id].content).then(()=>showToast('✓ Copiado'));
+  const c = cards[id];
+  if (!c || !c.content) return;
+  const text = c.content;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast('✓ Copiado')).catch(() => copyFallback(text));
+  } else {
+    copyFallback(text);
+  }
+}
+function copyFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed'; ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('✓ Copiado');
+  } catch (e) {
+    showToast('No se pudo copiar');
+  }
+  document.body.removeChild(ta);
 }
 function downloadCard(id) {
   const c = cards[id];
@@ -1320,7 +1426,12 @@ function downloadCard(id) {
 function copyFileCard(id) {
   const c = cards[id];
   if (!c || c.type !== 'file') return;
-  navigator.clipboard.writeText(c.meta.name || '').then(() => showToast('✓ Nombre copiado'));
+  const text = c.meta.name || '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast('✓ Nombre copiado')).catch(() => copyFallback(text));
+  } else {
+    copyFallback(text);
+  }
 }
 function downloadFileCard(id) {
   const c = cards[id];
@@ -1348,6 +1459,7 @@ function clearAll() {
   updateSpaceBadges();
   updateRestoreButtonVisibility();
   updateAccentFromBoard();
+  saveCardsToStorage();
   if (buf.length > 0)
     showToastWithUndo('🗑 Pizarrón de ' + SPACES[currentSpace] + ' limpiado', restoreCleared);
   else
@@ -1367,6 +1479,7 @@ function restoreCleared() {
   updateSpaceBadges();
   updateAccentFromBoard();
   updateRestoreButtonVisibility();
+  saveCardsToStorage();
   showToast('↩ Restaurado');
 }
 
@@ -1432,36 +1545,46 @@ document.getElementById('fileInput').addEventListener('change', function() {
 });
 
 // ========== PASTE ==========
-document.addEventListener('paste',e=>{
-  e.preventDefault();
-  const items = e.clipboardData?.items;
-  if (items) {
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.kind === 'file' && item.type.indexOf('image/') === 0) {
-        const file = item.getAsFile();
-        if (file) {
-          const fr = new FileReader();
-          fr.onload = ev => {
-            createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: (file.name||'').split('.').pop()||'png', size: file.size });
-            tryGrowPetFromShare();
-            showToast('📁 Imagen pegada');
-          };
-          fr.readAsDataURL(file);
-          return;
+document.addEventListener('paste', function(e) {
+  try {
+    const dt = e.clipboardData;
+    if (!dt) return;
+    const items = dt.items;
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file' && item.type.indexOf('image/') === 0) {
+          const file = item.getAsFile();
+          if (file) {
+            e.preventDefault();
+            const fr = new FileReader();
+            fr.onload = function(ev) {
+              createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: (file.name||'').split('.').pop()||'png', size: file.size });
+              tryGrowPetFromShare();
+              saveCardsToStorage();
+              showToast('📁 Imagen pegada');
+            };
+            fr.readAsDataURL(file);
+            return;
+          }
         }
       }
     }
-  }
-  const text = e.clipboardData?.getData('text') || '';
-  if (text.trim()) {
-    lastActivityTime = Date.now();
-    petJump = 18;
-    const detected = detectSyntax(text);
-    const filename = generateFilename(detected);
-    createCard(text, 'code', { detected, filename });
-    tryGrowPetFromShare();
-    showToast(`✓ ${detected.label} → ${filename}`);
+    const text = dt.getData('text/plain') || dt.getData('text') || '';
+    if (text.trim()) {
+      e.preventDefault();
+      lastActivityTime = Date.now();
+      petJump = 18;
+      const detected = detectSyntax(text);
+      const filename = generateFilename(detected);
+      createCard(text, 'code', { detected, filename });
+      tryGrowPetFromShare();
+      saveCardsToStorage();
+      showToast('✓ ' + detected.label + ' → ' + filename);
+    }
+  } catch (err) {
+    console.warn('Paste error:', err);
+    showToast('No se pudo pegar. Prueba el botón + o arrastrar.');
   }
 });
 
@@ -1494,10 +1617,13 @@ function closeManualIfBackdrop(e) {
 
 // ========== SHARE (permanent link) ==========
 function shareSession() {
-  const url=`${location.origin}${location.pathname}?session=${SESSION_ID}`;
-  navigator.clipboard.writeText(url).then(()=>{
-    showToast('🔗 Link copiado — el enlace NO expira');
-  });
+  const url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => showToast('🔗 Link copiado — el enlace NO expira')).catch(() => copyFallback(url));
+  } else {
+    copyFallback(url);
+    showToast('🔗 Link copiado');
+  }
 }
 
 // ========== TOAST ==========
@@ -1548,22 +1674,22 @@ if (session.isJoining) {
   }, 600);
 }
 
-// ========== DEMO CARDS ==========
-setTimeout(()=>{
-  createCard(
-    `SELECT u.id, u.name, COUNT(o.id) AS total_orders\nFROM users u\nLEFT JOIN orders o ON o.user_id = u.id\nWHERE u.active = 1\nGROUP BY u.id\nORDER BY total_orders DESC\nLIMIT 10;`,
-    'code', {detected:{lang:'sql',ext:'sql',label:'SQL'}, filename:'un_coso_veloz.sql', userName:'Pizarrón'});
-}, 400);
-
-setTimeout(()=>{
-  createCard(
-    `import { useState } from 'react'\n\nexport default function Card({ title, body }) {\n  const [open, setOpen] = useState(false)\n\n  return (\n    <div className="card">\n      <h2 onClick={() => setOpen(!open)}>{title}</h2>\n      {open && <p>{body}</p>}\n    </div>\n  )\n}`,
-    'code', {detected:{lang:'jsx',ext:'jsx',label:'JSX'}, filename:'un_coso_nuevo.jsx', userName:'Pizarrón'});
-}, 750);
-
-setTimeout(()=>{
-  createCard('', 'file', {name:'diseño_final_v3.figma', ext:'figma', size:2_400_000, userName:'Pizarrón'});
-}, 1100);
+// ========== CARGAR GUARDADO O DEMO ==========
+if (!loadCardsFromStorage()) {
+  setTimeout(()=>{
+    createCard(
+      `SELECT u.id, u.name, COUNT(o.id) AS total_orders\nFROM users u\nLEFT JOIN orders o ON o.user_id = u.id\nWHERE u.active = 1\nGROUP BY u.id\nORDER BY total_orders DESC\nLIMIT 10;`,
+      'code', {detected:{lang:'sql',ext:'sql',label:'SQL'}, filename:'un_coso_veloz.sql', userName:'Pizarrón'});
+  }, 400);
+  setTimeout(()=>{
+    createCard(
+      `import { useState } from 'react'\n\nexport default function Card({ title, body }) {\n  const [open, setOpen] = useState(false)\n\n  return (\n    <div className="card">\n      <h2 onClick={() => setOpen(!open)}>{title}</h2>\n      {open && <p>{body}</p>}\n    </div>\n  )\n}`,
+      'code', {detected:{lang:'jsx',ext:'jsx',label:'JSX'}, filename:'un_coso_nuevo.jsx', userName:'Pizarrón'});
+  }, 750);
+  setTimeout(()=>{
+    createCard('', 'file', {name:'diseño_final_v3.figma', ext:'figma', size:2_400_000, userName:'Pizarrón'});
+  }, 1100);
+}
 setTimeout(updateAccentFromBoard, 1200);
 </script>
 </body>

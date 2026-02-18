@@ -35,7 +35,17 @@ var SESSION_START = session.createdAt;
 var totalUsers = session.users;
 
 var sessionIdEl = document.getElementById('sessionId');
-if (sessionIdEl) sessionIdEl.textContent = SESSION_ID;
+if (sessionIdEl) {
+  sessionIdEl.textContent = SESSION_ID;
+  sessionIdEl.title = 'Sala: ' + SESSION_ID + ' — Clic para copiar enlace';
+  sessionIdEl.style.cursor = 'pointer';
+  sessionIdEl.addEventListener('click', function() {
+    var url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function() { showToast('Enlace copiado'); }).catch(function() {});
+    }
+  });
+}
 
 // ========== SUPABASE (opcional: tiempo real y presencia) ==========
 var supabaseClient = null;
@@ -1187,12 +1197,14 @@ function closeManualIfBackdrop(e) {
 
 // ========== SHARE (permanent link) ==========
 function shareSession() {
-  const url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID;
+  var url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID;
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(() => showToast('🔗 Link copiado — el enlace NO expira')).catch(() => copyFallback(url));
+    navigator.clipboard.writeText(url).then(function() {
+      showToast('🔗 Enlace copiado. Quien abra ese enlace verá en vivo lo que se pegue aquí.');
+    }).catch(function() { copyFallback(url); showToast('🔗 Enlace copiado'); });
   } else {
     copyFallback(url);
-    showToast('🔗 Link copiado');
+    showToast('🔗 Enlace copiado. Pásalo para que otros vean en vivo.');
   }
 }
 
@@ -1283,6 +1295,7 @@ function applyCardFromRemote(row) {
   updateSpaceBadges();
   updateAccentFromBoard();
   saveCardsToStorage();
+  showToast('✓ Tarjeta recibida en vivo', 2000);
 }
 
 function loadCardsFromSupabase() {
@@ -1317,15 +1330,18 @@ function initSupabaseRealtime() {
       schema: 'public',
       table: 'pizarron_cards'
     }, function(payload) {
-      if (!payload || !payload.new || payload.new.room_id !== roomId) return;
-      applyCardFromRemote(payload.new);
+      if (!payload || !payload.new) return;
+      var r = payload.new;
+      if (String(r.room_id || '').trim() !== String(roomId || '').trim()) return;
+      applyCardFromRemote(r);
     })
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
       table: 'pizarron_cards'
     }, function(payload) {
-      if (!payload || !payload.new || payload.new.room_id !== roomId) return;
+      if (!payload || !payload.new) return;
+      if (String(payload.new.room_id || '').trim() !== String(roomId || '').trim()) return;
       var id = payload.new.card_id;
       var el = document.getElementById(id);
       if (el) {
@@ -1338,7 +1354,8 @@ function initSupabaseRealtime() {
       schema: 'public',
       table: 'pizarron_cards'
     }, function(payload) {
-      if (!payload || !payload.old || payload.old.room_id !== roomId) return;
+      if (!payload || !payload.old) return;
+      if (String(payload.old.room_id || '').trim() !== String(roomId || '').trim()) return;
       var id = payload.old.card_id;
       var el = document.getElementById(id);
       if (el) { el.remove(); }
@@ -1400,10 +1417,18 @@ function initSupabaseRealtime() {
 // ========== ON JOIN ==========
 if (session.isJoining) {
   setTimeout(function() {
-    showToast('✓ Conectado a ' + SESSION_ID);
+    showToast('✓ Sala compartida. Verás en vivo lo que cualquiera pegue aquí.');
     updateUserCount();
     triggerPetGreeting();
   }, 600);
+} else {
+  setTimeout(function() {
+    if (supabaseClient) {
+      showToast('Usa «Compartir» y abre ese enlace en otros navegadores para ver en vivo.');
+    } else if (location.hostname && location.hostname !== 'localhost' && location.protocol !== 'file:') {
+      showToast('Tiempo real: configura SUPABASE_URL y SUPABASE_ANON_KEY en Netlify.', 5000);
+    }
+  }, 1500);
 }
 
 // ========== CARGAR GUARDADO O DEMO ==========

@@ -149,6 +149,8 @@
   .live-indicator::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; margin-right: 4px; vertical-align: middle; animation: live-pulse 1.5s ease-in-out infinite; }
   @keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   @media (max-width: 900px) { .connected-users-list { display: none; } }
+  .share-hint { font-size: 10px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
+  @media (max-width: 1100px) { .share-hint { display: none; } }
 
   .username-display {
     font-family: 'Space Mono', monospace;
@@ -682,7 +684,7 @@
 <div class="topbar">
   <div class="logo">Pizarrón Grupo Epem</div>
   <span class="session-id" id="spaceLabel" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">General</span>
-  <div class="session-id" id="sessionId">SES-XXXXXX</div>
+  <div class="session-id" id="sessionId" title="Clic para copiar enlace de esta sala" role="button" tabindex="0">SES-XXXXXX</div>
   <div class="days-badge" id="daysBadge">📅 día 1</div>
   <div class="users-count" id="usersCountContainer" title="Usuarios conectados a este pizarrón en tiempo real">👥 <strong id="userCount">1</strong> <span id="userCountLabel">en sesión</span><span id="connectedUsersList" class="connected-users-list"></span><span id="liveIndicator" class="live-indicator" style="display:none;" title="Sincronización en vivo activa">● En vivo</span></div>
   <span class="username-display" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
@@ -690,7 +692,8 @@
   <button class="btn" onclick="organizeCardsInGrid()">Organizar</button>
   <button class="btn" onclick="clearAll()">Limpiar</button>
   <button class="btn" id="restoreBtn" onclick="restoreCleared()" style="display:none;">↩ Restaurar</button>
-  <button class="btn primary" onclick="shareSession()">🔗 Compartir</button>
+  <button class="btn primary" onclick="shareSession()" title="Copia el enlace. Quien lo abra verá en vivo lo que se pegue aquí.">🔗 Compartir</button>
+  <span class="share-hint" id="shareHint">Mismo enlace = todos ven en vivo</span>
 </div>
 
 <!-- CANVAS -->

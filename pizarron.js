@@ -6,19 +6,6 @@ if (typeof window !== 'undefined') {
 var cards = typeof window !== 'undefined' ? window.cards : {};
 var cardCounter = typeof window !== 'undefined' ? window.cardCounter : 0;
 
-// Ejecutar todo lo que usa el DOM cuando el documento esté listo
-function runWhenReady(fn) {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fn);
-  } else {
-    fn();
-  }
-}
-
-runWhenReady(function initPizarron() {
-  var sessionIdEl = document.getElementById('sessionId');
-  if (!sessionIdEl) return;
-
 // ========== SESSION (persistent via localStorage + URL) ==========
 function getOrCreateSession() {
   var urlParams = new URLSearchParams(window.location.search);
@@ -47,7 +34,8 @@ var SESSION_ID = session.id;
 var SESSION_START = session.createdAt;
 var totalUsers = session.users;
 
-sessionIdEl.textContent = SESSION_ID;
+var sessionIdEl = document.getElementById('sessionId');
+if (sessionIdEl) sessionIdEl.textContent = SESSION_ID;
 
 // ========== ESPACIOS / DEPARTAMENTOS ==========
 const SPACES = {
@@ -1163,22 +1151,3 @@ if (document.readyState === 'loading') {
 } else {
   initCards();
 }
-
-  // Exponer en window para onclick del HTML
-  window.switchSpace = switchSpace;
-  window.organizeCardsInGrid = organizeCardsInGrid;
-  window.clearAll = clearAll;
-  window.restoreCleared = restoreCleared;
-  window.shareSession = shareSession;
-  window.pasteFromClipboard = pasteFromClipboard;
-  window.openManual = openManual;
-  window.closeManualIfBackdrop = closeManualIfBackdrop;
-  window.closeManual = closeManual;
-  window.openFilePicker = openFilePicker;
-  window.copyCard = copyCard;
-  window.copyFileCard = copyFileCard;
-  window.removeCard = removeCard;
-  window.downloadCard = downloadCard;
-  window.downloadFileCard = downloadFileCard;
-
-}); // end runWhenReady(initPizarron)

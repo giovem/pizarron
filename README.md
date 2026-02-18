@@ -19,11 +19,18 @@ Abre `pizarron.html` en el navegador. No requiere servidor.
 - **Archivos**: arrastrar al tablero o clic en + para elegir archivos.
 - **Nombre**: la primera vez que agregues algo se pedirá tu nombre (se guarda en el navegador).
 
-## Despliegue en Vercel
+## Despliegue
 
+### Vercel
 1. Conecta este repositorio en [Vercel](https://vercel.com).
-2. No hace falta configurar build: es un proyecto estático.
-3. La raíz del sitio (`/`) sirve automáticamente el pizarrón gracias a `vercel.json`.
+2. No configures build: es un proyecto estático.
+3. La raíz (`/`) sirve el pizarrón gracias a `vercel.json`.
+
+### Netlify
+1. Conecta este repositorio en [Netlify](https://app.netlify.com).
+2. **Build command**: deja vacío.
+3. **Publish directory**: `.` (raíz del repo).
+4. La raíz (`/`) sirve el pizarrón gracias a `netlify.toml` (redirect 200 a `/pizarron.html`).
 
 Los datos (sesión, nombre, mascota) se guardan en el navegador (localStorage) por origen; cada despliegue tiene su propia “instancia”.
 

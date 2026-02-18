@@ -12,15 +12,15 @@
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap');
 
   :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --border: #1e1e2e;
+    --bg: #1e2028;
+    --surface: #282b35;
+    --border: #3a3d4a;
     --accent: #22aaff;
-    --accent2: #ff4466;
-    --accent3: #4488ff;
-    --text: #e8e8f0;
-    --muted: #555570;
-    --card: #16161f;
+    --accent2: #f0627a;
+    --accent3: #5a9cff;
+    --text: #e8eaf4;
+    --muted: #6b6f82;
+    --card: #2a2d38;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -39,8 +39,8 @@
     position: fixed;
     inset: 0;
     background-image:
-      linear-gradient(rgba(34,170,255,0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34,170,255,0.06) 1px, transparent 1px);
+      linear-gradient(rgba(34,170,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,170,255,0.05) 1px, transparent 1px);
     background-size: 40px 40px;
     pointer-events: none;
     z-index: 0;
@@ -95,7 +95,7 @@
     position: fixed;
     top: 0; left: 56px; right: 0;
     height: 52px;
-    background: rgba(10,10,15,0.95);
+    background: rgba(30,32,40,0.97);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
@@ -118,7 +118,7 @@
   .session-id {
     font-family: 'Space Mono', monospace;
     font-size: 11px;
-    color: #c4c4dc;
+    color: var(--muted);
     border: 1px solid var(--border);
     padding: 3px 8px;
     border-radius: 4px;
@@ -138,24 +138,74 @@
 
   .users-count {
     font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 6px;
+    border-radius: 6px;
+    background: rgba(107, 91, 158, 0.12);
+    border: 1px solid rgba(107, 91, 158, 0.3);
+  }
+  .users-count-icon { font-size: 14px; line-height: 1; opacity: 0.9; }
+  .users-count .user-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 22px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, #6b5b9e 0%, #534780 100%);
+    border-radius: 6px;
+    line-height: 1;
+  }
+  .users-count strong { color: var(--text); font-weight: 600; }
+  .users-count .user-count-label { color: var(--muted); font-weight: 400; font-size: 11px; }
+  .connected-users-list {
+    margin-left: 2px;
+    color: var(--text);
+    font-weight: 500;
     font-size: 11px;
-    color: #c4c4dc;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .connected-users-list::before { content: ': '; color: var(--muted); font-weight: 400; }
+  .users-count .live-sep { width: 1px; height: 14px; background: var(--border); margin: 0 6px; flex-shrink: 0; }
+  .live-indicator {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .live-indicator::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+    animation: live-pulse 1.5s ease-in-out infinite;
     flex-shrink: 0;
   }
-  .users-count strong { color: var(--text); }
-  .connected-users-list { margin-left: 6px; color: var(--muted); font-weight: 400; }
-  .connected-users-list::before { content: ': '; }
-  .live-indicator { margin-left: 8px; font-size: 10px; color: var(--accent); font-weight: 700; }
-  .live-indicator::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; margin-right: 4px; vertical-align: middle; animation: live-pulse 1.5s ease-in-out infinite; }
-  @keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-  @media (max-width: 900px) { .connected-users-list { display: none; } }
+  @keyframes live-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.9); } }
+  @media (max-width: 900px) { .connected-users-list { display: none; } .users-count .live-sep { margin: 0 4px; } }
   .share-hint { font-size: 10px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
   @media (max-width: 1100px) { .share-hint { display: none; } }
 
   .username-display {
     font-family: 'Space Mono', monospace;
     font-size: 11px;
-    color: #c4c4dc;
+    color: var(--text);
     padding: 3px 8px;
     border-radius: 4px;
     border: 1px solid transparent;
@@ -185,8 +235,8 @@
     flex-shrink: 0;
   }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
-  .btn.primary:hover { background: #1a8fd9; }
+  .btn.primary { background: var(--accent); color: #0d0e14; border-color: var(--accent); font-weight: 700; }
+  .btn.primary:hover { background: #1a9ae0; }
 
   .canvas {
     position: fixed;
@@ -231,7 +281,7 @@
     border-radius: 8px;
     min-width: 240px;
     max-width: 420px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.25);
     cursor: grab;
     user-select: none;
     transition: box-shadow 0.15s, border-color 0.15s;
@@ -241,14 +291,14 @@
     from { opacity: 0; transform: scale(0.85) translateY(10px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
-  .card:hover { box-shadow: 0 12px 48px rgba(0,0,0,0.6); }
-  .card.dragging { cursor: grabbing; box-shadow: 0 24px 64px rgba(0,0,0,0.8); border-color: var(--accent); z-index: 500; }
+  .card:hover { box-shadow: 0 10px 36px rgba(0,0,0,0.35); }
+  .card.dragging { cursor: grabbing; box-shadow: 0 20px 48px rgba(0,0,0,0.5); border-color: var(--accent); z-index: 500; }
   .card.card-pulse {
     animation: card-pulse 0.6s ease-in-out 3;
   }
   @keyframes card-pulse {
-    0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,0.4); border-color: var(--border); }
-    50% { box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(34,170,255,0.4); border-color: var(--accent); }
+    0%, 100% { box-shadow: 0 6px 24px rgba(0,0,0,0.25); border-color: var(--border); }
+    50% { box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(34,170,255,0.35); border-color: var(--accent); }
   }
 
   .card-header {
@@ -686,7 +736,14 @@
   <span class="session-id" id="spaceLabel" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">General</span>
   <div class="session-id" id="sessionId" title="Clic para copiar enlace de esta sala" role="button" tabindex="0">SES-XXXXXX</div>
   <div class="days-badge" id="daysBadge">📅 día 1</div>
-  <div class="users-count" id="usersCountContainer" title="Usuarios conectados a este pizarrón en tiempo real">👥 <strong id="userCount">1</strong> <span id="userCountLabel">en sesión</span><span id="connectedUsersList" class="connected-users-list"></span><span id="liveIndicator" class="live-indicator" style="display:none;" title="Sincronización en vivo activa">● En vivo</span></div>
+  <div class="users-count" id="usersCountContainer" title="Usuarios conectados a este pizarrón en tiempo real">
+    <span class="users-count-icon" aria-hidden="true">👥</span>
+    <span class="user-count-badge" id="userCount">1</span>
+    <span id="userCountLabel" class="user-count-label">en sesión</span>
+    <span id="connectedUsersList" class="connected-users-list"></span>
+    <span class="live-sep" id="liveSep" style="display:none;" aria-hidden="true"></span>
+    <span id="liveIndicator" class="live-indicator" style="display:none;" title="Sincronización en vivo activa">En vivo</span>
+  </div>
   <span class="username-display" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
   <div class="spacer"></div>
   <button class="btn" onclick="organizeCardsInGrid()">Organizar</button>

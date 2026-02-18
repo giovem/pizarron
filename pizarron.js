@@ -1251,7 +1251,9 @@ function showToastWithUndo(msg, onUndo, dur=6000) {
 // ========== SUPABASE REALTIME (presencia + sync tarjetas) ==========
 function setLiveIndicator(connected) {
   var el = document.getElementById('liveIndicator');
+  var sep = document.getElementById('liveSep');
   if (el) el.style.display = connected ? '' : 'none';
+  if (sep) sep.style.display = connected ? '' : 'none';
 }
 
 function updatePresenceUI() {

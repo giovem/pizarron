@@ -1,3 +1,7 @@
+// Inicializar primero para todos los navegadores (evitar ReferenceError)
+var cards = {};
+var cardCounter = 0;
+
 // ========== SESSION (persistent via localStorage + URL) ==========
 function getOrCreateSession() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -47,9 +51,6 @@ let currentSpace = (function() {
   return (p && SPACES[p]) ? p : 'general';
 })();
 
-// Usar var para evitar "temporal dead zone" (algunos entornos/caché)
-var cardCounter = 0;
-var cards = {};
 var PAD = 16;
 const CARDS_STORAGE_KEY = 'pz_cards_' + SESSION_ID;
 const MAX_STORED_FILE_SIZE = 800 * 1024;
@@ -92,7 +93,8 @@ function refreshSpaceVisibility() {
 }
 
 function updateSpaceBadges() {
-  const counts = {};
+  if (!cards) return;
+  var counts = {};
   Object.keys(SPACES).forEach(s => { counts[s] = 0; });
   Object.keys(cards).forEach(id => {
     const s = cards[id].space || 'general';
@@ -427,7 +429,8 @@ const LANG_ACCENT = {
   py: '#64b4ff', css: '#c864ff', txt: '#555570', file: '#ff4466'
 };
 function getDominantLanguage() {
-  const count = {};
+  if (!cards) return null;
+  var count = {};
   Object.keys(cards).forEach(id => {
     if (cards[id].space !== currentSpace) return;
     const lang = cards[id].type === 'file' ? 'file' : (cards[id].meta?.detected?.lang || 'txt');
@@ -488,8 +491,9 @@ function getNextGridPosition() {
 }
 
 function saveCardsToStorage() {
+  if (!cards) return;
   try {
-    const list = [];
+    var list = [];
     Object.keys(cards).forEach(id => {
       const c = cards[id];
       const el = document.getElementById(id);
@@ -777,8 +781,9 @@ function downloadFileCard(id) {
   showToast('↓ ' + fn);
 }
 function clearAll() {
+  if (!cards) return;
   clearedCardsBuffer[currentSpace] = [];
-  const buf = clearedCardsBuffer[currentSpace];
+  var buf = clearedCardsBuffer[currentSpace];
   Object.keys(cards).forEach(id => {
     if (cards[id].space !== currentSpace) return;
     const el = document.getElementById(id);

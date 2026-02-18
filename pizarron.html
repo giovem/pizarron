@@ -252,9 +252,10 @@
     letter-spacing: 0.5px;
     color: var(--muted);
     padding: 0 10px 6px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(107, 91, 158, 0.4);
     margin-bottom: 6px;
     flex-shrink: 0;
+    background: rgba(107, 91, 158, 0.06);
   }
   .presence-user-list {
     list-style: none;
@@ -543,15 +544,35 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding-bottom: 2px;
+    padding: 8px 8px 10px;
     pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
   }
   .pet-container > .pet-greeting,
   .pet-container > .pet-paste-msg {
     position: absolute;
     bottom: 86px;
   }
-
+  .pet-section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    padding: 4px 6px;
+    border-bottom: 1px solid rgba(34, 170, 255, 0.35);
+    width: 100%;
+    text-align: center;
+    background: rgba(34, 170, 255, 0.06);
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
   .pet-label {
     font-family: 'Space Mono', monospace;
     font-size: 9px;
@@ -1111,6 +1132,7 @@
 
 <!-- PIXEL BUG PET -->
 <div class="pet-container" id="petContainer">
+  <div class="pet-section-title">Mascota</div>
   <div class="pet-label">
     <span class="pet-name">GUSSI</span> · <span class="pet-lv" id="petLvLabel">lv.1</span>
   </div>

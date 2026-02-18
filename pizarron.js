@@ -47,10 +47,10 @@ let currentSpace = (function() {
   return (p && SPACES[p]) ? p : 'general';
 })();
 
-// Declarar cards y cardCounter al inicio para evitar "Cannot access before initialization"
-let cardCounter = 0;
-const cards = {};
-const PAD = 16;
+// Usar var para evitar "temporal dead zone" (algunos entornos/caché)
+var cardCounter = 0;
+var cards = {};
+var PAD = 16;
 const CARDS_STORAGE_KEY = 'pz_cards_' + SESSION_ID;
 const MAX_STORED_FILE_SIZE = 800 * 1024;
 const CELL_W = 280;

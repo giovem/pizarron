@@ -209,6 +209,7 @@
   }
 
   .spacer { flex: 1; }
+  .topbar-break { display: none; }
 
   .username-next-to-day { margin-left: 4px; }
 
@@ -232,17 +233,24 @@
 
   .presence-sidebar {
     position: fixed;
-    top: 52px;
-    right: 0;
-    width: 150px;
-    bottom: 0;
+    top: 60px;
+    right: 12px;
+    width: 160px;
+    max-height: 50vh;
     background: var(--surface);
-    border-left: 1px solid var(--border);
+    border: 1px solid rgba(107, 91, 158, 0.35);
+    border-radius: 10px;
     z-index: 100;
     display: flex;
     flex-direction: column;
     padding: 8px 0;
     overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    animation: presence-float 4s ease-in-out infinite;
+  }
+  @keyframes presence-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
   }
   .presence-sidebar-title {
     font-family: 'Space Mono', monospace;
@@ -260,9 +268,10 @@
   .presence-user-list {
     list-style: none;
     margin: 0;
-    padding: 0 6px;
+    padding: 0 6px 8px;
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
   }
   .presence-user-item {
     display: flex;
@@ -296,7 +305,7 @@
 
   .canvas {
     position: fixed;
-    top: 52px; left: 56px; right: 150px; bottom: 0;
+    top: 52px; left: 56px; right: 0; bottom: 0;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
     z-index: 1;
@@ -311,7 +320,7 @@
 
   .drop-overlay {
     position: fixed;
-    top: 52px; left: 56px; right: 150px; bottom: 0;
+    top: 52px; left: 56px; right: 0; bottom: 0;
     border: 3px dashed var(--accent);
     background: rgba(34,170,255,0.06);
     display: flex;
@@ -869,6 +878,15 @@
 
   /* ========== RESPONSIVE: móviles (sidebar pasa a barra inferior) ========== */
   @media (max-width: 768px) {
+    .topbar-break {
+      display: block;
+      flex-basis: 100%;
+      width: 100%;
+      height: 0;
+      min-height: 0;
+      overflow: hidden;
+      order: 0;
+    }
     .sidebar {
       top: auto;
       bottom: 0;
@@ -878,7 +896,8 @@
       height: 56px;
       flex-direction: row;
       justify-content: space-around;
-      padding: 0 8px;
+      align-items: center;
+      padding: 0 6px;
       border-right: none;
       border-top: 1px solid var(--border);
       padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
@@ -887,6 +906,7 @@
       width: 44px;
       height: 44px;
       flex-shrink: 0;
+      min-width: 44px;
     }
     .sidebar-btn-label {
       left: 50%;
@@ -898,20 +918,17 @@
     }
     .topbar {
       left: 0;
-      padding: 0 10px;
+      padding: 8px 10px;
       gap: 8px;
       min-height: 48px;
-      height: 48px;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
+      height: auto;
+      flex-wrap: wrap;
+      align-content: flex-start;
     }
-    .topbar::-webkit-scrollbar { height: 0; display: none; }
     .logo {
       font-size: 14px;
       flex-shrink: 0;
-      max-width: 140px;
+      max-width: 200px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -920,19 +937,20 @@
     .topbar .days-badge,
     .topbar .username-display {
       font-size: 10px;
-      padding: 2px 6px;
+      padding: 3px 6px;
     }
-    .topbar .session-id#spaceLabel { max-width: 70px; }
-    .topbar .session-id#sessionId { max-width: 72px; }
-    .username-next-to-day { max-width: 70px; }
+    .topbar .session-id#spaceLabel { max-width: 80px; }
+    .topbar .session-id#sessionId { max-width: 76px; }
+    .username-next-to-day { max-width: 72px; }
     .topbar .spacer { display: none; }
     .topbar .btn {
-      padding: 6px 10px;
-      font-size: 10px;
+      padding: 8px 12px;
+      font-size: 11px;
+      min-height: 36px;
     }
     .canvas,
     .drop-overlay {
-      top: 48px;
+      top: 76px;
       left: 0;
       right: 0;
       bottom: 56px;
@@ -977,9 +995,10 @@
       height: 48px;
     }
     .pet-container {
-      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      bottom: calc(56px + 10px + env(safe-area-inset-bottom, 0px));
       right: 8px;
       width: 100px;
+      z-index: 90;
     }
     .pet-container canvas#bugCanvas { width: 80px; height: 72px; }
     .grow-pop { right: 16px; bottom: 75px; }
@@ -1006,15 +1025,15 @@
   /* ========== RESPONSIVE: móviles pequeños ========== */
   @media (max-width: 480px) {
     .topbar {
-      padding: 0 8px;
+      padding: 6px 8px;
       gap: 6px;
     }
-    .logo { font-size: 12px; }
+    .logo { font-size: 13px; max-width: 160px; }
     .topbar .session-id#spaceLabel,
-    .topbar .session-id#sessionId { max-width: 56px; font-size: 9px; }
+    .topbar .session-id#sessionId { max-width: 58px; font-size: 9px; }
     .days-badge { font-size: 9px; padding: 2px 6px; }
-    .username-next-to-day { max-width: 56px; font-size: 9px; }
-    .topbar .btn { padding: 5px 8px; font-size: 9px; }
+    .username-next-to-day { max-width: 60px; font-size: 9px; }
+    .topbar .btn { padding: 6px 10px; font-size: 10px; min-height: 34px; }
     .card {
       min-width: 160px;
       max-width: calc(100vw - 16px);
@@ -1023,31 +1042,38 @@
     .card-body { padding: 10px; max-height: 180px; }
     .card-footer { padding: 4px 10px; }
     pre { font-size: 10px; }
-    .sidebar-btn { width: 40px; height: 40px; font-size: 18px; }
-    .sidebar { height: 52px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+    .sidebar { height: 54px; padding: 0 4px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); justify-content: space-between; }
+    .sidebar-btn { width: 42px; height: 42px; min-width: 42px; font-size: 18px; }
     .canvas,
     .drop-overlay {
-      bottom: 52px;
-      bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+      bottom: 54px;
+      bottom: calc(54px + env(safe-area-inset-bottom, 0px));
     }
-    .paste-hint { bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+    .paste-hint { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
     .new-card-btn,
     .manual-btn {
-      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      bottom: calc(64px + env(safe-area-inset-bottom, 0px));
       width: 44px;
       height: 44px;
     }
-    .pet-container { width: 80px; }
+    .pet-container {
+      bottom: calc(54px + 8px + env(safe-area-inset-bottom, 0px));
+      width: 82px;
+      padding: 6px 6px 8px;
+    }
     .pet-container canvas#bugCanvas { width: 64px; height: 56px; }
+    .pet-section-title { font-size: 8px; padding: 3px 4px; }
     .card-image-preview { max-height: 160px; }
   }
 
   /* Orientación horizontal en móvil: más altura para canvas */
   @media (max-width: 768px) and (orientation: landscape) {
-    .topbar { flex-wrap: nowrap; min-height: 44px; }
+    .topbar-break { display: none; }
+    .topbar { flex-wrap: nowrap; min-height: 44px; height: 48px; }
     .logo { flex-basis: auto; max-width: 120px; }
     .sidebar { height: 48px; }
-    .canvas, .drop-overlay { bottom: 48px; bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+    .canvas, .drop-overlay { top: 48px; bottom: 48px; bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+    .pet-container { bottom: calc(48px + 8px + env(safe-area-inset-bottom, 0px)); }
     .new-card-btn, .manual-btn { bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
   }
 </style>
@@ -1075,6 +1101,7 @@
     <button type="button" class="username-edit-btn" id="usernameEditBtn" title="Cambiar nombre">✎</button>
   </span>
   <div class="spacer"></div>
+  <span class="topbar-break" aria-hidden="true"></span>
   <button class="btn" onclick="organizeCardsInGrid()">Organizar</button>
   <button class="btn" onclick="clearAll()">Limpiar</button>
   <button class="btn" id="restoreBtn" onclick="restoreCleared()" style="display:none;">↩ Restaurar</button>

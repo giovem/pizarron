@@ -6,40 +6,48 @@ if (typeof window !== 'undefined') {
 var cards = typeof window !== 'undefined' ? window.cards : {};
 var cardCounter = typeof window !== 'undefined' ? window.cardCounter : 0;
 
+// Ejecutar todo lo que usa el DOM cuando el documento esté listo
+function runWhenReady(fn) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fn);
+  } else {
+    fn();
+  }
+}
+
+runWhenReady(function initPizarron() {
+  var sessionIdEl = document.getElementById('sessionId');
+  if (!sessionIdEl) return;
+
 // ========== SESSION (persistent via localStorage + URL) ==========
 function getOrCreateSession() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlSes = urlParams.get('session');
-
+  var urlParams = new URLSearchParams(window.location.search);
+  var urlSes = urlParams.get('session');
   if (urlSes) {
-    let stored = JSON.parse(localStorage.getItem('pz_' + urlSes) || 'null');
-    if (!stored) {
-      stored = { id: urlSes, createdAt: Date.now(), users: 0 };
-    }
+    var stored = JSON.parse(localStorage.getItem('pz_' + urlSes) || 'null');
+    if (!stored) stored = { id: urlSes, createdAt: Date.now(), users: 0 };
     stored.users = (stored.users || 0) + 1;
     localStorage.setItem('pz_' + urlSes, JSON.stringify(stored));
-    return { ...stored, isJoining: true };
+    return { id: stored.id, createdAt: stored.createdAt, users: stored.users, isJoining: true };
   }
-
-  const curKey = localStorage.getItem('pz_current');
+  var curKey = localStorage.getItem('pz_current');
   if (curKey) {
-    const stored = JSON.parse(localStorage.getItem('pz_' + curKey) || 'null');
+    var stored = JSON.parse(localStorage.getItem('pz_' + curKey) || 'null');
     if (stored) return stored;
   }
-
-  const id = 'SES-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-  const data = { id, createdAt: Date.now(), users: 1 };
+  var id = 'SES-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+  var data = { id: id, createdAt: Date.now(), users: 1 };
   localStorage.setItem('pz_' + id, JSON.stringify(data));
   localStorage.setItem('pz_current', id);
   return data;
 }
 
-const session = getOrCreateSession();
-const SESSION_ID    = session.id;
-const SESSION_START = session.createdAt;
-let   totalUsers    = session.users;
+var session = getOrCreateSession();
+var SESSION_ID = session.id;
+var SESSION_START = session.createdAt;
+var totalUsers = session.users;
 
-document.getElementById('sessionId').textContent = SESSION_ID;
+sessionIdEl.textContent = SESSION_ID;
 
 // ========== ESPACIOS / DEPARTAMENTOS ==========
 const SPACES = {
@@ -1155,3 +1163,22 @@ if (document.readyState === 'loading') {
 } else {
   initCards();
 }
+
+  // Exponer en window para onclick del HTML
+  window.switchSpace = switchSpace;
+  window.organizeCardsInGrid = organizeCardsInGrid;
+  window.clearAll = clearAll;
+  window.restoreCleared = restoreCleared;
+  window.shareSession = shareSession;
+  window.pasteFromClipboard = pasteFromClipboard;
+  window.openManual = openManual;
+  window.closeManualIfBackdrop = closeManualIfBackdrop;
+  window.closeManual = closeManual;
+  window.openFilePicker = openFilePicker;
+  window.copyCard = copyCard;
+  window.copyFileCard = copyFileCard;
+  window.removeCard = removeCard;
+  window.downloadCard = downloadCard;
+  window.downloadFileCard = downloadFileCard;
+
+}); // end runWhenReady(initPizarron)

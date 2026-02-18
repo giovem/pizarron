@@ -1,6 +1,10 @@
-// Inicializar primero para todos los navegadores (evitar ReferenceError)
-var cards = {};
-var cardCounter = 0;
+// Inicializar primero y exponer en window para todos los navegadores
+if (typeof window !== 'undefined') {
+  window.cards = window.cards || {};
+  window.cardCounter = window.cardCounter || 0;
+}
+var cards = typeof window !== 'undefined' ? window.cards : {};
+var cardCounter = typeof window !== 'undefined' ? window.cardCounter : 0;
 
 // ========== SESSION (persistent via localStorage + URL) ==========
 function getOrCreateSession() {
@@ -616,10 +620,14 @@ function organizeCardsInGrid() {
   showToast('Tarjetas organizadas por usuario');
 }
 
-function createCard(content, type, meta = {}) {
-  const id = 'card-' + (++cardCounter);
-  const inner = document.getElementById('canvasInner');
-  const { x, y } = getNextGridPosition();
+function createCard(content, type, meta) {
+  if (!meta) meta = {};
+  if (!cards) cards = (typeof window !== 'undefined' && window.cards) ? window.cards : {};
+  var inner = document.getElementById('canvasInner');
+  if (!inner) return null;
+  var id = 'card-' + (++cardCounter);
+  var pos = getNextGridPosition();
+  var x = pos.x, y = pos.y;
 
   const userName = meta.userName !== undefined ? meta.userName : getOrPromptUsername();
   meta.userName = userName;
@@ -838,52 +846,123 @@ var dropOv   = document.getElementById('dropOverlay');
 const textExts = ['sql','jsx','js','ts','tsx','py','css','html','json','txt','md','xml','yaml','yml','sh','rb','go','rs','php','c','cpp','java'];
 
 if (canvasEl && dropOv) {
-  canvasEl.addEventListener('dragover', function(e) { e.preventDefault(); dropOv.classList.add('active'); });
-  canvasEl.addEventListener('dragleave', function() { dropOv.classList.remove('active'); });
-  canvasEl.addEventListener('drop', function(e) {
+  canvasEl.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    dropOv.classList.add('active');
+  });
+  canvasEl.addEventListener('dragleave', function(e) {
     e.preventDefault();
     dropOv.classList.remove('active');
+  });
+  canvasEl.addEventListener('drop', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dropOv.classList.remove('active');
     var files = e.dataTransfer && e.dataTransfer.files;
-    if (files) for (var i = 0; i < files.length; i++) addFileToBoard(files[i]);
+    if (files && files.length) {
+      for (var i = 0; i < files.length; i++) addFileToBoard(files[i]);
+      if (files.length > 1) showToast(files.length + ' archivos agregados');
+    }
+  });
+}
+
+// Menú contextual (clic derecho) en el canvas: Pegar y Subir archivo
+if (canvasEl) {
+  canvasEl.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    var menu = document.getElementById('pizarronContextMenu');
+    if (!menu) {
+      menu = document.createElement('div');
+      menu.id = 'pizarronContextMenu';
+      menu.style.cssText = 'position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:4px 0;min-width:180px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.4);display:none;';
+      menu.innerHTML = '<button type="button" class="ctx-item" data-action="paste" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:transparent;color:var(--text);font-family:Space Mono,monospace;font-size:12px;cursor:pointer;">📋 Pegar (Ctrl+V)</button><button type="button" class="ctx-item" data-action="upload" style="display:block;width:100%;text-align:left;padding:10px 16px;border:none;background:transparent;color:var(--text);font-family:Space Mono,monospace;font-size:12px;cursor:pointer;">📁 Subir archivo...</button>';
+      menu.querySelectorAll('.ctx-item').forEach(function(btn) {
+        btn.addEventListener('mouseenter', function() { this.style.background = 'var(--border)'; });
+        btn.addEventListener('mouseleave', function() { this.style.background = 'transparent'; });
+        btn.addEventListener('click', function() {
+          menu.style.display = 'none';
+          if (this.dataset.action === 'paste') pasteFromClipboard();
+          else openFilePicker();
+        });
+      });
+      document.body.appendChild(menu);
+    }
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+    menu.style.display = 'block';
+    setTimeout(function() {
+      document.addEventListener('click', function hideMenu() {
+        menu.style.display = 'none';
+        document.removeEventListener('click', hideMenu);
+      });
+    }, 0);
   });
 }
 
 function addFileToBoard(file) {
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (textExts.includes(ext)) {
-    const r = new FileReader();
-    r.onload = ev => {
-      const content = ev.target.result;
-      const detected = (['sql','jsx','js','ts','tsx','py','css','json'].includes(ext))
-        ? { lang: ext === 'ts' || ext === 'tsx' ? 'jsx' : ext, ext, label: ext.toUpperCase() }
-        : detectSyntax(content);
-      createCard(content, 'code', { detected, filename: file.name });
-      tryGrowPetFromShare();
-      showToast('✓ ' + file.name);
-    };
-    r.readAsText(file);
-  } else {
-    const fr = new FileReader();
-    fr.onload = ev => {
-      createCard(ev.target.result, 'file', { name: file.name, ext, size: file.size });
-      tryGrowPetFromShare();
-      showToast('📁 ' + file.name);
-    };
-    fr.readAsDataURL(file);
+  if (!file || !file.name) return;
+  try {
+    var ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (textExts.indexOf(ext) !== -1) {
+      var r = new FileReader();
+      r.onload = function(ev) {
+        try {
+          var content = ev.target.result;
+          var detected = (['sql','jsx','js','ts','tsx','py','css','json'].indexOf(ext) !== -1)
+            ? { lang: ext === 'ts' || ext === 'tsx' ? 'jsx' : ext, ext: ext, label: ext.toUpperCase() }
+            : detectSyntax(content);
+          createCard(content, 'code', { detected: detected, filename: file.name });
+          tryGrowPetFromShare();
+          saveCardsToStorage();
+          showToast('✓ ' + file.name);
+        } catch (err) {
+          console.warn(err);
+          showToast('Error al agregar ' + file.name);
+        }
+      };
+      r.onerror = function() { showToast('No se pudo leer ' + file.name); };
+      r.readAsText(file);
+    } else {
+      var fr = new FileReader();
+      fr.onload = function(ev) {
+        try {
+          createCard(ev.target.result, 'file', { name: file.name, ext: ext, size: file.size });
+          tryGrowPetFromShare();
+          saveCardsToStorage();
+          showToast('📁 ' + file.name);
+        } catch (err) {
+          console.warn(err);
+          showToast('Error al agregar ' + file.name);
+        }
+      };
+      fr.onerror = function() { showToast('No se pudo leer ' + file.name); };
+      fr.readAsDataURL(file);
+    }
+  } catch (err) {
+    console.warn(err);
+    showToast('Error al procesar el archivo');
   }
 }
 
 function openFilePicker() {
   document.getElementById('fileInput').click();
 }
-document.getElementById('fileInput').addEventListener('change', function() {
-  const files = this.files;
-  if (!files || !files.length) return;
-  const n = files.length;
-  for (let i = 0; i < n; i++) addFileToBoard(files[i]);
-  if (n > 1) showToast(`${n} archivos agregados al pizarrón`);
-  this.value = '';
-});
+var fileInputEl = document.getElementById('fileInput');
+if (fileInputEl) {
+  fileInputEl.addEventListener('change', function() {
+    var files = this.files;
+    if (!files || !files.length) return;
+    try {
+      for (var i = 0; i < files.length; i++) addFileToBoard(files[i]);
+      if (files.length > 1) showToast(files.length + ' archivos agregados al pizarrón');
+    } catch (err) {
+      showToast('Error al subir archivos');
+    }
+    this.value = '';
+  });
+}
 
 // ========== PASTE ==========
 function pasteFromClipboard() {

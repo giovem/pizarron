@@ -194,8 +194,8 @@ function updateUserCount() {
   if (el) el.textContent = totalUsers;
   var elLabel = document.getElementById('userCountLabel');
   if (elLabel) elLabel.textContent = 'en sesión';
-  var elList = document.getElementById('connectedUsersList');
-  if (elList) elList.textContent = '';
+  var listEl = document.getElementById('presenceUserList');
+  if (listEl) listEl.innerHTML = '';
 }
 updateUserCount();
 
@@ -624,9 +624,18 @@ function appendCardFromItem(item) {
   var header = '', body = '', footer = '';
   if (item.type === 'file') {
     var fnEsc = esc(meta.name || 'archivo');
+    var isImg = item.content && typeof item.content === 'string' && item.content.indexOf('data:image/') === 0;
     header = '<span class="card-lang lang-file">ARCHIVO</span><span class="card-filename">' + fnEsc + '</span><div class="card-actions"><button class="card-btn" onclick="copyFileCard(\'' + id + '\')" title="Copiar nombre">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
-    body = '<div style="text-align:center;padding:8px 0"><span class="file-icon">' + getFileIcon(meta.ext) + '</span><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
+    body = isImg
+      ? '<div style="text-align:center;padding:8px 0"><img class="card-image-preview" alt=""/><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || 'png').toUpperCase() + '</div></div>'
+      : '<div style="text-align:center;padding:8px 0"><span class="file-icon">' + getFileIcon(meta.ext) + '</span><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
     footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadFileCard(\'' + id + '\')">↓ descargar</button>';
+  } else if (item.type === 'link') {
+    var urlEsc = esc(item.content || '');
+    var urlShort = (item.content && item.content.length > 50) ? item.content.substring(0, 47) + '...' : (item.content || '');
+    header = '<span class="card-lang lang-txt">ENLACE</span><span class="card-filename">' + esc(urlShort) + '</span><div class="card-actions"><button class="card-btn" onclick="copyCard(\'' + id + '\')" title="Copiar enlace">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
+    body = '<div class="card-link-body"><p class="card-link-url">' + urlEsc + '</p><button type="button" class="btn primary card-link-open" onclick="(function(){ var c = typeof cards !== \'undefined\' && cards[\'' + id + '\']; if (c && c.content && window.openLinkWithChoice) window.openLinkWithChoice(c.content); })()">🔗 Abrir enlace</button></div>';
+    footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span>';
   } else {
     var det = meta.detected || { lang: 'txt', label: 'Texto' };
     header = '<span class="card-lang lang-' + det.lang + '">' + det.label + '</span><span class="card-filename">' + esc(meta.filename || '') + '</span><div class="card-actions"><button class="card-btn" onclick="copyCard(\'' + id + '\')" title="Copiar">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
@@ -641,6 +650,10 @@ function appendCardFromItem(item) {
   div.style.top = top;
   div.style.display = meta.space === currentSpace ? '' : 'none';
   div.innerHTML = '<div class="card-header">' + header + '</div><div class="card-body">' + body + '</div><div class="card-footer">' + footer + '</div>';
+  if (item.type === 'file' && item.content && typeof item.content === 'string' && item.content.indexOf('data:image/') === 0) {
+    var imgEl = div.querySelector('.card-image-preview');
+    if (imgEl) imgEl.src = item.content;
+  }
   inner.appendChild(div);
   makeDraggable(div, function(draggedId) {
     if (supabaseClient && typeof syncCardPositionToSupabase === 'function') syncCardPositionToSupabase(draggedId);
@@ -747,9 +760,26 @@ function createCard(content, type, meta) {
     footer = `
       <span class="card-time">Por ${userNameEsc} · ${createdAt}</span>
       <button class="card-download" onclick="downloadCard('${id}')">↓ descargar</button>`;
+  } else if (type === 'link') {
+    var urlEsc = esc(content);
+    var urlShort = content.length > 50 ? content.substring(0, 47) + '...' : content;
+    header = `
+      <span class="card-lang lang-txt">ENLACE</span>
+      <span class="card-filename">${esc(urlShort)}</span>
+      <div class="card-actions">
+        <button class="card-btn" onclick="copyCard('${id}')" title="Copiar enlace">⧉</button>
+        <button class="card-btn danger" onclick="removeCard('${id}')" title="Eliminar">✕</button>
+      </div>`;
+    body = `
+      <div class="card-link-body">
+        <p class="card-link-url">${urlEsc}</p>
+        <button type="button" class="btn primary card-link-open" onclick="(function(){ var c = typeof cards !== 'undefined' && cards['${id}']; if (c && c.content && window.openLinkWithChoice) window.openLinkWithChoice(c.content); })()">🔗 Abrir enlace</button>
+      </div>`;
+    footer = `<span class="card-time">Por ${userNameEsc} · ${createdAt}</span>`;
   } else {
     const icon = getFileIcon(meta.ext);
     const fnEsc = esc(meta.name);
+    var isImage = typeof content === 'string' && content.indexOf('data:image/') === 0;
     header = `
       <span class="card-lang lang-file">ARCHIVO</span>
       <span class="card-filename">${fnEsc}</span>
@@ -757,7 +787,9 @@ function createCard(content, type, meta) {
         <button class="card-btn" onclick="copyFileCard('${id}')" title="Copiar nombre">⧉</button>
         <button class="card-btn danger" onclick="removeCard('${id}')" title="Eliminar">✕</button>
       </div>`;
-    body = `
+    body = isImage
+      ? '<div style="text-align:center;padding:8px 0"><img class="card-image-preview" id="img-' + id + '" alt=""/><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size) + ' · .' + (meta.ext || 'png').toUpperCase() + '</div></div>'
+      : `
       <div style="text-align:center;padding:8px 0">
         <span class="file-icon">${icon}</span>
         <div class="file-meta">${fnEsc}<br>${formatSize(meta.size)} · .${(meta.ext||'').toUpperCase()}</div>
@@ -772,6 +804,10 @@ function createCard(content, type, meta) {
     <div class="card-body">${body}</div>
     <div class="card-footer">${footer}</div>`;
 
+  if (type === 'file' && typeof content === 'string' && content.indexOf('data:image/') === 0) {
+    var imgEl = div.querySelector('.card-image-preview');
+    if (imgEl) imgEl.src = content;
+  }
   inner.appendChild(div);
   makeDraggable(div, function(draggedId) {
     if (supabaseClient && typeof syncCardPositionToSupabase === 'function') syncCardPositionToSupabase(draggedId);
@@ -885,12 +921,32 @@ function downloadFileCard(id) {
   const c = cards[id];
   if (!c || c.type !== 'file' || !c.content) return;
   const fn = c.meta.name || 'archivo';
-  const a = document.createElement('a');
-  a.href = c.content;
-  a.download = fn;
-  a.click();
-  triggerCelebration();
-  showToast('↓ ' + fn);
+  const isDataUrl = typeof c.content === 'string' && c.content.indexOf('data:') === 0;
+  if (isDataUrl) {
+    fetch(c.content).then(function(res) { return res.blob(); }).then(function(blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = fn;
+      a.click();
+      URL.revokeObjectURL(url);
+      triggerCelebration();
+      showToast('↓ ' + fn);
+    }).catch(function() {
+      var a = document.createElement('a');
+      a.href = c.content;
+      a.download = fn;
+      a.click();
+      showToast('↓ ' + fn);
+    });
+  } else {
+    var a = document.createElement('a');
+    a.href = c.content;
+    a.download = fn;
+    a.click();
+    triggerCelebration();
+    showToast('↓ ' + fn);
+  }
 }
 function clearAll() {
   if (!cards) return;
@@ -944,27 +1000,42 @@ function restoreCleared() {
   showToast('↩ Restaurado');
 }
 
-// ========== DRAG ==========
+// ========== DRAG (mouse + touch para responsive) ==========
 function makeDraggable(el, onDragEnd) {
   var sx, sy, ox, oy;
-  el.addEventListener('mousedown', function(e) {
+  function getXY(e) {
+    if (e.touches && e.touches.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+  function start(e) {
     if (e.target.tagName === 'BUTTON') return;
-    el.classList.add('dragging');
-    sx = e.clientX; sy = e.clientY;
+    var xy = getXY(e);
+    sx = xy.x; sy = xy.y;
     ox = parseInt(el.style.left, 10) || 0; oy = parseInt(el.style.top, 10) || 0;
-    var mv = function(e2) {
-      el.style.left = (ox + e2.clientX - sx) + 'px';
-      el.style.top = (oy + e2.clientY - sy) + 'px';
-    };
-    var up = function() {
+    el.classList.add('dragging');
+    function move(e2) {
+      e2.preventDefault(); /* evita scroll de página mientras se arrastra */
+      var xy2 = getXY(e2);
+      el.style.left = (ox + xy2.x - sx) + 'px';
+      el.style.top = (oy + xy2.y - sy) + 'px';
+    }
+    function up() {
       el.classList.remove('dragging');
-      document.removeEventListener('mousemove', mv);
+      document.removeEventListener('mousemove', move);
       document.removeEventListener('mouseup', up);
+      document.removeEventListener('touchmove', move, { passive: false });
+      document.removeEventListener('touchend', up);
+      document.removeEventListener('touchcancel', up);
       if (typeof onDragEnd === 'function') onDragEnd(el.id);
-    };
-    document.addEventListener('mousemove', mv);
+    }
+    document.addEventListener('mousemove', move);
     document.addEventListener('mouseup', up);
-  });
+    document.addEventListener('touchmove', move, { passive: false });
+    document.addEventListener('touchend', up);
+    document.addEventListener('touchcancel', up);
+  }
+  el.addEventListener('mousedown', start);
+  el.addEventListener('touchstart', start, { passive: false });
 }
 
 // ========== FILE DROP Y EXPLORADOR ==========
@@ -1150,16 +1221,26 @@ document.addEventListener('paste', function(e) {
       e.preventDefault();
       lastActivityTime = Date.now();
       triggerPetPasteAnimation();
-      try {
-        const detected = detectSyntax(text);
-        const filename = generateFilename(detected);
-        createCard(text, 'code', { detected: detected, filename: filename });
+      var trimmed = text.trim();
+      var singleLine = trimmed.split(/\r?\n/).length === 1;
+      var looksLikeUrl = /^https?:\/\/\S+$/i.test(trimmed);
+      if (singleLine && looksLikeUrl) {
+        createCard(trimmed, 'link', { url: trimmed });
         tryGrowPetFromShare();
         saveCardsToStorage();
-        showToast('✓ ' + detected.label + ' → ' + filename);
-      } catch (err) {
-        console.warn(err);
-        showToast('Error al pegar. Usa el botón Pegar.');
+        showToast('🔗 Enlace agregado. Clic para abrirlo.');
+      } else {
+        try {
+          const detected = detectSyntax(text);
+          const filename = generateFilename(detected);
+          createCard(text, 'code', { detected: detected, filename: filename });
+          tryGrowPetFromShare();
+          saveCardsToStorage();
+          showToast('✓ ' + detected.label + ' → ' + filename);
+        } catch (err) {
+          console.warn(err);
+          showToast('Error al pegar. Usa el botón Pegar.');
+        }
       }
     }
   } catch (err) {
@@ -1207,6 +1288,36 @@ function shareSession() {
     showToast('🔗 Enlace copiado. Pásalo para que otros vean en vivo.');
   }
 }
+
+// ========== ABRIR ENLACE (elegir cómo abrirlo) ==========
+var linkModalCurrentUrl = '';
+function openLinkWithChoice(url) {
+  if (!url || typeof url !== 'string') return;
+  linkModalCurrentUrl = url.trim();
+  var overlay = document.getElementById('linkModalOverlay');
+  var urlEl = document.getElementById('linkModalUrl');
+  if (urlEl) urlEl.textContent = linkModalCurrentUrl.length > 80 ? linkModalCurrentUrl.substring(0, 77) + '...' : linkModalCurrentUrl;
+  if (overlay) overlay.style.display = 'flex';
+  function closeModal() {
+    if (overlay) overlay.style.display = 'none';
+    linkModalCurrentUrl = '';
+  }
+  var openBtn = document.getElementById('linkModalOpenBtn');
+  var copyBtn = document.getElementById('linkModalCopyBtn');
+  var closeBtn = document.getElementById('linkModalCloseBtn');
+  if (openBtn) openBtn.onclick = function() {
+    if (linkModalCurrentUrl) window.open(linkModalCurrentUrl, '_blank', 'noopener');
+    closeModal();
+  };
+  if (copyBtn) copyBtn.onclick = function() {
+    if (linkModalCurrentUrl && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(linkModalCurrentUrl).then(function() { showToast('Enlace copiado'); }).catch(function() {});
+    } else if (linkModalCurrentUrl) copyFallback(linkModalCurrentUrl);
+    closeModal();
+  };
+  if (closeBtn) closeBtn.onclick = closeModal;
+}
+if (typeof window !== 'undefined') window.openLinkWithChoice = openLinkWithChoice;
 
 // ========== TOAST ==========
 function triggerCelebration() {
@@ -1258,14 +1369,14 @@ function setLiveIndicator(connected) {
 
 function updatePresenceUI() {
   var elCount = document.getElementById('userCount');
-  var elList = document.getElementById('connectedUsersList');
   var elLabel = document.getElementById('userCountLabel');
+  var listEl = document.getElementById('presenceUserList');
   if (!elCount) return;
   if (!supabaseChannel) {
     setLiveIndicator(false);
     elCount.textContent = totalUsers;
     if (elLabel) elLabel.textContent = 'en sesión';
-    if (elList) elList.textContent = '';
+    if (listEl) listEl.innerHTML = '';
     return;
   }
   var state = supabaseChannel.presenceState();
@@ -1279,7 +1390,15 @@ function updatePresenceUI() {
   var n = names.length;
   elCount.textContent = n || '0';
   if (elLabel) elLabel.textContent = n === 1 ? 'en sesión' : 'en sesión';
-  if (elList) elList.textContent = n > 0 ? names.join(', ') : '';
+  if (listEl) {
+    listEl.innerHTML = '';
+    names.forEach(function(name) {
+      var li = document.createElement('li');
+      li.className = 'presence-user-item';
+      li.innerHTML = '<span class="presence-user-icon" aria-hidden="true">👤</span><span class="presence-user-name">' + esc(name) + '</span>';
+      listEl.appendChild(li);
+    });
+  }
 }
 
 function applyCardFromRemote(row) {

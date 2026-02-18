@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -25,11 +25,16 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Syne', sans-serif;
     min-height: 100vh;
+    min-height: 100dvh;
     overflow: hidden;
     position: relative;
   }
@@ -213,18 +218,18 @@
 
   .spacer { flex: 1; }
 
+  .username-next-to-day { margin-left: 4px; }
   .topbar-right {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 4px;
+    justify-content: center;
     flex-shrink: 0;
     margin-left: 12px;
     padding-left: 12px;
     border-left: 1px solid var(--border);
   }
-  .topbar-right .username-display { margin-bottom: 0; }
-  .topbar-right .users-count { width: 100%; justify-content: flex-end; }
+  .topbar-right .users-count { justify-content: flex-end; }
 
   .btn {
     font-family: 'Space Mono', monospace;
@@ -244,10 +249,73 @@
   .btn.primary { background: var(--accent); color: #0d0e14; border-color: var(--accent); font-weight: 700; }
   .btn.primary:hover { background: #1a9ae0; }
 
+  .presence-sidebar {
+    position: fixed;
+    top: 52px;
+    right: 0;
+    width: 200px;
+    bottom: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 0;
+    overflow: hidden;
+  }
+  .presence-sidebar-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    padding: 0 14px 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .presence-user-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 8px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .presence-user-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .presence-user-item .presence-user-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(107, 91, 158, 0.25);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .presence-user-item .presence-user-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .canvas {
     position: fixed;
-    top: 52px; left: 56px; right: 0; bottom: 0;
+    top: 52px; left: 56px; right: 200px; bottom: 0;
     overflow: auto;
+    -webkit-overflow-scrolling: touch;
     z-index: 1;
   }
   .canvas-inner {
@@ -260,7 +328,7 @@
 
   .drop-overlay {
     position: fixed;
-    top: 52px; left: 56px; right: 0; bottom: 0;
+    top: 52px; left: 56px; right: 200px; bottom: 0;
     border: 3px dashed var(--accent);
     background: rgba(34,170,255,0.06);
     display: flex;
@@ -722,6 +790,270 @@
     color: var(--muted);
   }
   .manual-mascota .pet-name-ref { color: var(--accent); font-weight: 700; }
+
+  .link-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .link-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  }
+  .link-modal-title {
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .link-modal-url {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    word-break: break-all;
+    margin-bottom: 16px;
+    max-height: 60px;
+    overflow-y: auto;
+  }
+  .link-modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .card-image-preview {
+    max-width: 100%;
+    max-height: 200px;
+    display: block;
+    margin: 0 auto 8px;
+    border-radius: 6px;
+    background: var(--bg);
+  }
+  .card-link-body { padding: 4px 0; }
+  .card-link-url {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    word-break: break-all;
+    margin-bottom: 10px;
+    max-height: 48px;
+    overflow-y: auto;
+  }
+  .card-link-open { width: 100%; margin-top: 4px; }
+
+  /* ========== RESPONSIVE: tabletas y pantallas medianas ========== */
+  @media (max-width: 1024px) {
+    .presence-sidebar {
+      display: none;
+    }
+    .canvas,
+    .drop-overlay {
+      right: 0;
+    }
+    .new-card-btn {
+      right: 24px;
+    }
+    .grow-pop { right: 24px; }
+  }
+
+  /* ========== RESPONSIVE: móviles (sidebar pasa a barra inferior) ========== */
+  @media (max-width: 768px) {
+    .sidebar {
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 56px;
+      flex-direction: row;
+      justify-content: space-around;
+      padding: 0 8px;
+      border-right: none;
+      border-top: 1px solid var(--border);
+      padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+    .sidebar-btn {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+    .topbar {
+      left: 0;
+      padding: 0 10px;
+      gap: 8px;
+      min-height: 48px;
+      height: 48px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .topbar::-webkit-scrollbar { height: 0; display: none; }
+    .logo {
+      font-size: 14px;
+      flex-shrink: 0;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .topbar .session-id,
+    .topbar .days-badge,
+    .topbar .username-display {
+      font-size: 10px;
+      padding: 2px 6px;
+    }
+    .topbar .session-id#spaceLabel { max-width: 70px; }
+    .topbar .session-id#sessionId { max-width: 72px; }
+    .username-next-to-day { max-width: 70px; }
+    .topbar .spacer { display: none; }
+    .topbar .btn {
+      padding: 6px 10px;
+      font-size: 10px;
+    }
+    .topbar-right {
+      margin-left: 4px;
+      padding-left: 8px;
+      border-left-width: 1px;
+    }
+    .users-count {
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+    .users-count .user-count-badge {
+      min-width: 20px;
+      height: 20px;
+      font-size: 11px;
+    }
+    .canvas,
+    .drop-overlay {
+      top: 48px;
+      left: 0;
+      right: 0;
+      bottom: 56px;
+      bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+    .canvas-inner {
+      padding: 12px;
+    }
+    .card {
+      min-width: 200px;
+      max-width: calc(100vw - 24px);
+    }
+    .card-body { max-height: 220px; }
+    .paste-hint {
+      bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+      font-size: 11px;
+      padding: 6px 14px;
+      gap: 8px;
+    }
+    .paste-hint span { display: none; }
+    .toast {
+      bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+      left: 12px;
+      right: 12px;
+      transform: none;
+      max-width: calc(100vw - 24px);
+      white-space: normal;
+      text-align: center;
+    }
+    .toast.show { transform: none; }
+    .new-card-btn {
+      right: 16px;
+      bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+      width: 48px;
+      height: 48px;
+      font-size: 24px;
+    }
+    .manual-btn {
+      left: 16px;
+      bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+      width: 48px;
+      height: 48px;
+    }
+    .pet-container {
+      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      right: 8px;
+      width: 100px;
+    }
+    .pet-container canvas#bugCanvas { width: 80px; height: 72px; }
+    .grow-pop { right: 16px; bottom: 75px; }
+    .manual-overlay { padding: 12px; }
+    .manual-panel {
+      max-width: 100%;
+      max-height: 90vh;
+      max-height: 90dvh;
+    }
+    .manual-panel .manual-close {
+      width: 40px;
+      height: 40px;
+      top: 12px;
+      right: 12px;
+    }
+    .link-modal-overlay { padding: 12px; }
+    .link-modal { max-width: 100%; padding: 16px; }
+    .link-modal-actions { flex-direction: column; }
+    .link-modal-actions .btn { width: 100%; }
+    .drop-overlay-text { font-size: 24px; }
+    .drop-overlay-text span { font-size: 14px; }
+  }
+
+  /* ========== RESPONSIVE: móviles pequeños ========== */
+  @media (max-width: 480px) {
+    .topbar {
+      padding: 0 8px;
+      gap: 6px;
+    }
+    .logo { font-size: 12px; }
+    .topbar .session-id#spaceLabel,
+    .topbar .session-id#sessionId { max-width: 56px; font-size: 9px; }
+    .days-badge { font-size: 9px; padding: 2px 6px; }
+    .username-next-to-day { max-width: 56px; font-size: 9px; }
+    .topbar .btn { padding: 5px 8px; font-size: 9px; }
+    .users-count .user-count-label { display: none; }
+    .card {
+      min-width: 160px;
+      max-width: calc(100vw - 16px);
+    }
+    .card-header { padding: 8px 10px 6px; }
+    .card-body { padding: 10px; max-height: 180px; }
+    .card-footer { padding: 4px 10px; }
+    pre { font-size: 10px; }
+    .sidebar-btn { width: 40px; height: 40px; font-size: 18px; }
+    .sidebar { height: 52px; padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+    .canvas,
+    .drop-overlay {
+      bottom: 52px;
+      bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+    }
+    .paste-hint { bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+    .new-card-btn,
+    .manual-btn {
+      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      width: 44px;
+      height: 44px;
+    }
+    .pet-container { width: 80px; }
+    .pet-container canvas#bugCanvas { width: 64px; height: 56px; }
+    .card-image-preview { max-height: 160px; }
+  }
+
+  /* Orientación horizontal en móvil: más altura para canvas */
+  @media (max-width: 768px) and (orientation: landscape) {
+    .topbar { flex-wrap: nowrap; min-height: 44px; }
+    .logo { flex-basis: auto; max-width: 120px; }
+    .sidebar { height: 48px; }
+    .canvas, .drop-overlay { bottom: 48px; bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+    .new-card-btn, .manual-btn { bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+  }
 </style>
 </head>
 <body>
@@ -742,6 +1074,7 @@
   <span class="session-id" id="spaceLabel" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">General</span>
   <div class="session-id" id="sessionId" title="Clic para copiar enlace de esta sala" role="button" tabindex="0">SES-XXXXXX</div>
   <div class="days-badge" id="daysBadge">📅 día 1</div>
+  <span class="username-display username-next-to-day" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
   <div class="spacer"></div>
   <button class="btn" onclick="organizeCardsInGrid()">Organizar</button>
   <button class="btn" onclick="clearAll()">Limpiar</button>
@@ -749,17 +1082,21 @@
   <button class="btn primary" onclick="shareSession()" title="Copia el enlace. Quien lo abra verá en vivo lo que se pegue aquí.">🔗 Compartir</button>
   <span class="share-hint" id="shareHint">Mismo enlace = todos ven en vivo</span>
   <div class="topbar-right">
-    <span class="username-display" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
     <div class="users-count" id="usersCountContainer" title="Usuarios conectados a este pizarrón en tiempo real">
       <span class="users-count-icon" aria-hidden="true">👥</span>
       <span class="user-count-badge" id="userCount">1</span>
       <span id="userCountLabel" class="user-count-label">en sesión</span>
-      <span id="connectedUsersList" class="connected-users-list" aria-hidden="true"></span>
       <span class="live-sep" id="liveSep" style="display:none;" aria-hidden="true"></span>
       <span id="liveIndicator" class="live-indicator" style="display:none;" title="Sincronización en vivo activa">En vivo</span>
     </div>
   </div>
 </div>
+
+<!-- Barra derecha: usuarios conectados (presencia en tiempo real) -->
+<aside class="presence-sidebar" id="presenceSidebar" aria-label="Usuarios en sesión">
+  <div class="presence-sidebar-title">En sesión</div>
+  <ul class="presence-user-list" id="presenceUserList"></ul>
+</aside>
 
 <!-- CANVAS -->
 <div class="canvas" id="canvas">
@@ -811,6 +1148,19 @@
   </div>
   <div class="pet-zzz" id="petZzz" style="visibility:hidden;">Z z z</div>
   <canvas id="bugCanvas" width="100" height="90"></canvas>
+</div>
+
+<!-- Modal: cómo abrir enlace -->
+<div class="link-modal-overlay" id="linkModalOverlay" role="dialog" aria-label="Abrir enlace" style="display:none;" onclick="if(event.target===this) this.style.display='none'">
+  <div class="link-modal" onclick="event.stopPropagation()">
+    <h3 class="link-modal-title">Abrir enlace</h3>
+    <p class="link-modal-url" id="linkModalUrl"></p>
+    <div class="link-modal-actions">
+      <button type="button" class="btn primary" id="linkModalOpenBtn">Abrir en nueva pestaña</button>
+      <button type="button" class="btn" id="linkModalCopyBtn">Copiar enlace</button>
+      <button type="button" class="btn" id="linkModalCloseBtn">Cerrar</button>
+    </div>
+  </div>
 </div>
 
 <!-- TOAST -->

@@ -143,6 +143,9 @@
     flex-shrink: 0;
   }
   .users-count strong { color: var(--text); }
+  .connected-users-list { margin-left: 6px; color: var(--muted); font-weight: 400; }
+  .connected-users-list::before { content: ': '; }
+  @media (max-width: 900px) { .connected-users-list { display: none; } }
 
   .username-display {
     font-family: 'Space Mono', monospace;
@@ -432,6 +435,11 @@
     padding-bottom: 2px;
     pointer-events: none;
   }
+  .pet-container > .pet-greeting,
+  .pet-container > .pet-paste-msg {
+    position: absolute;
+    bottom: 86px;
+  }
 
   .pet-label {
     font-family: 'Space Mono', monospace;
@@ -463,6 +471,41 @@
     z-index: 960;
     animation: pop-up 1.4s ease-out forwards;
     text-shadow: 0 0 8px rgba(34,170,255,0.8);
+  }
+  .pet-greeting {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--surface);
+    border: 1px solid rgba(34,170,255,0.4);
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 951;
+    animation: pet-greeting-in 0.4s ease-out, pet-greeting-out 0.3s ease-in 2.7s forwards;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  @keyframes pet-greeting-in {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.8); }
+    100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  }
+  @keyframes pet-greeting-out {
+    0%   { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .pet-paste-msg {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 951;
+    animation: pet-greeting-in 0.25s ease-out, pet-greeting-out 0.2s ease-in 0.8s forwards;
   }
   @keyframes pop-up {
     0%   { opacity: 0; transform: translateY(0) scale(0.7); }
@@ -638,7 +681,7 @@
   <span class="session-id" id="spaceLabel" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">General</span>
   <div class="session-id" id="sessionId">SES-XXXXXX</div>
   <div class="days-badge" id="daysBadge">📅 día 1</div>
-  <div class="users-count" title="Quien ha abierto este enlace en este navegador (sin servidor no hay lista en vivo)">👥 <strong id="userCount">1</strong> en sesión</div>
+  <div class="users-count" id="usersCountContainer" title="Usuarios conectados a este pizarrón en tiempo real">👥 <strong id="userCount">1</strong> <span id="userCountLabel">en sesión</span><span id="connectedUsersList" class="connected-users-list"></span></div>
   <span class="username-display" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
   <div class="spacer"></div>
   <button class="btn" onclick="organizeCardsInGrid()">Organizar</button>
@@ -676,7 +719,7 @@
       <div class="manual-body" id="manualBody">
         <p>Hola, <strong id="manualUserName">Usuario</strong>.</p>
         <p>Este es el <strong>Pizarrón Grupo EPEM</strong>: un tablero colaborativo para compartir código y archivos por departamento.</p>
-        <p><strong>¿Cómo usarlo?</strong> Usa la barra lateral para cambiar de espacio (General, Soporte, Desarrollo, etc.). Pega código con <strong>Ctrl+V</strong> o arrastra archivos al tablero. El botón <strong>+</strong> abre el explorador para agregar más. Puedes mover las tarjetas arrastrándolas, descargar con «↓ descargar» y organizar con el botón <strong>Organizar</strong>. Las tarjetas se guardan en este navegador al recargar. Comparte el enlace con <strong>Compartir</strong> para que otros abran la misma sesión (cada uno ve sus propias tarjetas hasta que haya un servidor en tiempo real).</p>
+        <p><strong>¿Cómo usarlo?</strong> Usa la barra lateral para cambiar de espacio (General, Soporte, Desarrollo, etc.). Pega código con <strong>Ctrl+V</strong> o arrastra archivos al tablero. El botón <strong>+</strong> abre el explorador para agregar más. Puedes mover las tarjetas arrastrándolas, descargar con «↓ descargar» y organizar con el botón <strong>Organizar</strong>. Las tarjetas se guardan en este navegador. Con <strong>Compartir</strong> copias el enlace; si configuras Supabase (tiempo real), todos los que abran ese enlace verán las mismas tarjetas y quién está conectado.</p>
         <p><strong>Tip:</strong> El color del tablero cambia según el lenguaje más usado. Si pegar no funciona, usa el botón +.</p>
         <div class="manual-mascota">
           <p><strong>Nuestra mascota</strong> es <span class="pet-name-ref">GUSSI</span>: un bichito pixelado que vive en la esquina del pizarrón. Sube de nivel cuando compartes contenido (una vez por día), reacciona cuando pegas código, se duerme si no hay actividad y celebra cuando descargas algo. ¡Cuídala!</p>
@@ -691,7 +734,7 @@
 <button class="new-card-btn" onclick="openFilePicker()" title="Agregar archivos o código">+</button>
 
 <!-- PIXEL BUG PET -->
-<div class="pet-container">
+<div class="pet-container" id="petContainer">
   <div class="pet-label">
     <span class="pet-name">GUSSI</span> · <span class="pet-lv" id="petLvLabel">lv.1</span>
   </div>
@@ -702,6 +745,9 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- Supabase (opcional): copia config.supabase.example.js a config.supabase.js y rellena. Ese archivo no se sube a Git. -->
+<script src="config.supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="pizarron.js" defer></script>
 </body>
 </html>

@@ -37,6 +37,22 @@ var totalUsers = session.users;
 var sessionIdEl = document.getElementById('sessionId');
 if (sessionIdEl) sessionIdEl.textContent = SESSION_ID;
 
+// ========== SUPABASE (opcional: tiempo real y presencia) ==========
+var supabaseClient = null;
+var supabaseChannel = null;
+var PRESENCE_USER_ID = 'pz-' + Math.random().toString(36).substr(2, 9);
+var MAX_SYNC_CONTENT = 200000; // truncar contenido mayor para sync
+
+if (typeof window !== 'undefined' && window.PIZARRON_SUPABASE && window.PIZARRON_SUPABASE.url && window.PIZARRON_SUPABASE.anonKey && typeof window.supabase !== 'undefined') {
+  try {
+    supabaseClient = window.supabase.createClient(window.PIZARRON_SUPABASE.url, window.PIZARRON_SUPABASE.anonKey);
+  } catch (e) {
+    console.warn('Supabase init:', e);
+  }
+}
+var syncCardPositionToSupabase = function() {};
+var syncCardToSupabase = function() {};
+
 // ========== ESPACIOS / DEPARTAMENTOS ==========
 const SPACES = {
   general: 'General',
@@ -147,7 +163,16 @@ function updateDays() {
 updateDays();
 
 function updateUserCount() {
-  document.getElementById('userCount').textContent = totalUsers;
+  if (supabaseChannel) {
+    updatePresenceUI();
+    return;
+  }
+  var el = document.getElementById('userCount');
+  if (el) el.textContent = totalUsers;
+  var elLabel = document.getElementById('userCountLabel');
+  if (elLabel) elLabel.textContent = 'en sesión';
+  var elList = document.getElementById('connectedUsersList');
+  if (elList) elList.textContent = '';
 }
 updateUserCount();
 
@@ -374,6 +399,38 @@ document.addEventListener('keydown', recordActivity);
 document.addEventListener('click', recordActivity);
 document.addEventListener('paste', recordActivity);
 
+function triggerPetGreeting() {
+  if (typeof petJump !== 'undefined') petJump = 24;
+  if (typeof petMood !== 'undefined') petMood = 1;
+  var container = document.getElementById('petContainer');
+  if (container) {
+    var bubble = document.createElement('div');
+    bubble.className = 'pet-greeting';
+    bubble.textContent = '¡Hola! Soy GUSSI 👋';
+    container.appendChild(bubble);
+    setTimeout(function() {
+      if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+    }, 3000);
+  }
+}
+
+function triggerPetPasteAnimation() {
+  if (typeof petJump !== 'undefined') petJump = 22;
+  if (typeof petMood !== 'undefined') petMood = 0.95;
+  var container = document.getElementById('petContainer');
+  if (container) {
+    var msg = document.createElement('div');
+    msg.className = 'pet-paste-msg';
+    msg.textContent = '✓';
+    msg.style.color = 'var(--accent)';
+    msg.style.fontWeight = '700';
+    container.appendChild(msg);
+    setTimeout(function() {
+      if (msg.parentNode) msg.parentNode.removeChild(msg);
+    }, 1100);
+  }
+}
+
 function growPet(msg) {
   petMood = 1.0;
   if (petLevel < 10) petLevel++;
@@ -526,6 +583,48 @@ function saveCardsToStorage() {
   }
 }
 
+function appendCardFromItem(item) {
+  var id = item.id;
+  if (!id || typeof id !== 'string') return false;
+  var inner = document.getElementById('canvasInner');
+  if (!inner) return false;
+  var num = parseInt(String(id).replace('card-', ''), 10);
+  if (!isNaN(num) && num > cardCounter) cardCounter = num;
+  cards[id] = { content: item.content, type: item.type || 'code', meta: item.meta || {} };
+  var meta = cards[id].meta;
+  meta.space = meta.space || 'general';
+  cards[id].space = meta.space;
+  var left = (item.left != null ? item.left : PAD) + 'px';
+  var top = (item.top != null ? item.top : PAD) + 'px';
+  var userNameEsc = esc(meta.userName || 'Anónimo');
+  var createdAt = (meta.createdAt != null) ? meta.createdAt : new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  var header = '', body = '', footer = '';
+  if (item.type === 'file') {
+    var fnEsc = esc(meta.name || 'archivo');
+    header = '<span class="card-lang lang-file">ARCHIVO</span><span class="card-filename">' + fnEsc + '</span><div class="card-actions"><button class="card-btn" onclick="copyFileCard(\'' + id + '\')" title="Copiar nombre">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
+    body = '<div style="text-align:center;padding:8px 0"><span class="file-icon">' + getFileIcon(meta.ext) + '</span><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
+    footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadFileCard(\'' + id + '\')">↓ descargar</button>';
+  } else {
+    var det = meta.detected || { lang: 'txt', label: 'Texto' };
+    header = '<span class="card-lang lang-' + det.lang + '">' + det.label + '</span><span class="card-filename">' + esc(meta.filename || '') + '</span><div class="card-actions"><button class="card-btn" onclick="copyCard(\'' + id + '\')" title="Copiar">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
+    body = '<pre>' + (item.content ? highlightCode(String(item.content), det.lang) : esc('')) + '</pre>';
+    footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadCard(\'' + id + '\')">↓ descargar</button>';
+  }
+  var div = document.createElement('div');
+  div.className = 'card';
+  div.id = id;
+  div.dataset.space = meta.space;
+  div.style.left = left;
+  div.style.top = top;
+  div.style.display = meta.space === currentSpace ? '' : 'none';
+  div.innerHTML = '<div class="card-header">' + header + '</div><div class="card-body">' + body + '</div><div class="card-footer">' + footer + '</div>';
+  inner.appendChild(div);
+  makeDraggable(div, function(draggedId) {
+    if (supabaseClient && typeof syncCardPositionToSupabase === 'function') syncCardPositionToSupabase(draggedId);
+  });
+  return true;
+}
+
 function loadCardsFromStorage() {
   try {
     var raw = localStorage.getItem(CARDS_STORAGE_KEY);
@@ -537,42 +636,7 @@ function loadCardsFromStorage() {
     var loaded = 0;
     for (var i = 0; i < list.length; i++) {
       try {
-        var item = list[i];
-        var id = item.id;
-        if (!id || typeof id !== 'string') continue;
-        var num = parseInt(String(id).replace('card-', ''), 10);
-        if (!isNaN(num) && num > cardCounter) cardCounter = num;
-        cards[id] = { content: item.content, type: item.type || 'code', meta: item.meta || {} };
-        var meta = cards[id].meta;
-        meta.space = meta.space || 'general';
-        cards[id].space = meta.space;
-        var left = (item.left != null ? item.left : PAD) + 'px';
-        var top = (item.top != null ? item.top : PAD) + 'px';
-        var userNameEsc = esc(meta.userName || 'Anónimo');
-        var createdAt = (meta.createdAt != null) ? meta.createdAt : new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-        var header = '', body = '', footer = '';
-        if (item.type === 'file') {
-          var fnEsc = esc(meta.name || 'archivo');
-          header = '<span class="card-lang lang-file">ARCHIVO</span><span class="card-filename">' + fnEsc + '</span><div class="card-actions"><button class="card-btn" onclick="copyFileCard(\'' + id + '\')" title="Copiar nombre">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
-          body = '<div style="text-align:center;padding:8px 0"><span class="file-icon">' + getFileIcon(meta.ext) + '</span><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
-          footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadFileCard(\'' + id + '\')">↓ descargar</button>';
-        } else {
-          var det = meta.detected || { lang: 'txt', label: 'Texto' };
-          header = '<span class="card-lang lang-' + det.lang + '">' + det.label + '</span><span class="card-filename">' + esc(meta.filename || '') + '</span><div class="card-actions"><button class="card-btn" onclick="copyCard(\'' + id + '\')" title="Copiar">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
-          body = '<pre>' + (item.content ? highlightCode(String(item.content), det.lang) : esc('')) + '</pre>';
-          footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadCard(\'' + id + '\')">↓ descargar</button>';
-        }
-        var div = document.createElement('div');
-        div.className = 'card';
-        div.id = id;
-        div.dataset.space = meta.space;
-        div.style.left = left;
-        div.style.top = top;
-        div.style.display = meta.space === currentSpace ? '' : 'none';
-        div.innerHTML = '<div class="card-header">' + header + '</div><div class="card-body">' + body + '</div><div class="card-footer">' + footer + '</div>';
-        inner.appendChild(div);
-        makeDraggable(div);
-        loaded++;
+        if (appendCardFromItem(list[i])) loaded++;
       } catch (itemErr) {
         console.warn('Card load skip:', itemErr);
       }
@@ -686,13 +750,16 @@ function createCard(content, type, meta) {
     <div class="card-footer">${footer}</div>`;
 
   inner.appendChild(div);
-  makeDraggable(div);
+  makeDraggable(div, function(draggedId) {
+    if (supabaseClient && typeof syncCardPositionToSupabase === 'function') syncCardPositionToSupabase(draggedId);
+  });
   cards[id] = { content: content, type: type, meta: meta, space: meta.space };
   div.classList.add('card-pulse');
-  setTimeout(() => div.classList.remove('card-pulse'), 2200);
+  setTimeout(function() { div.classList.remove('card-pulse'); }, 2200);
   updateSpaceBadges();
   updateAccentFromBoard();
   saveCardsToStorage();
+  if (supabaseClient && typeof syncCardToSupabase === 'function') syncCardToSupabase(id);
   showToast(userName + ' agregó en ' + spaceName);
   return id;
 }
@@ -728,8 +795,22 @@ function formatSize(b) {
 }
 
 function removeCard(id) {
-  const el = document.getElementById(id);
-  if (el) { el.style.transition='all 0.2s'; el.style.transform='scale(0.8)'; el.style.opacity='0'; setTimeout(()=>{ el.remove(); updateSpaceBadges(); updateAccentFromBoard(); saveCardsToStorage(); },200); delete cards[id]; }
+  var el = document.getElementById(id);
+  if (el) {
+    el.style.transition = 'all 0.2s';
+    el.style.transform = 'scale(0.8)';
+    el.style.opacity = '0';
+    setTimeout(function() {
+      el.remove();
+      delete cards[id];
+      updateSpaceBadges();
+      updateAccentFromBoard();
+      saveCardsToStorage();
+      if (supabaseClient) {
+        supabaseClient.from('pizarron_cards').delete().eq('room_id', SESSION_ID).eq('card_id', id).then(function() {});
+      }
+    }, 200);
+  }
 }
 function copyCard(id) {
   const c = cards[id];
@@ -806,6 +887,11 @@ function clearAll() {
     }
     delete cards[id];
   });
+  if (supabaseClient) {
+    idsToRemove.forEach(function(id) {
+      supabaseClient.from('pizarron_cards').delete().eq('room_id', SESSION_ID).eq('card_id', id).then(function() {});
+    });
+  }
   updateSpaceBadges();
   updateRestoreButtonVisibility();
   updateAccentFromBoard();
@@ -820,9 +906,11 @@ function restoreCleared() {
   const buf = clearedCardsBuffer[currentSpace] || [];
   if (!buf.length) return;
   const inner = document.getElementById('canvasInner');
-  buf.forEach(({ id, el, data }) => {
+  buf.forEach(function(o) {
+    var id = o.id, el = o.el, data = o.data;
     inner.appendChild(el);
     cards[id] = data;
+    if (supabaseClient && typeof syncCardToSupabase === 'function') syncCardToSupabase(id);
   });
   clearedCardsBuffer[currentSpace] = [];
   refreshSpaceVisibility();
@@ -834,14 +922,25 @@ function restoreCleared() {
 }
 
 // ========== DRAG ==========
-function makeDraggable(el) {
-  let sx,sy,ox,oy;
-  el.addEventListener('mousedown',(e)=>{
-    if(e.target.tagName==='BUTTON')return;
-    el.classList.add('dragging');sx=e.clientX;sy=e.clientY;ox=parseInt(el.style.left);oy=parseInt(el.style.top);
-    const mv=(e)=>{el.style.left=(ox+e.clientX-sx)+'px';el.style.top=(oy+e.clientY-sy)+'px';};
-    const up=()=>{el.classList.remove('dragging');document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
-    document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+function makeDraggable(el, onDragEnd) {
+  var sx, sy, ox, oy;
+  el.addEventListener('mousedown', function(e) {
+    if (e.target.tagName === 'BUTTON') return;
+    el.classList.add('dragging');
+    sx = e.clientX; sy = e.clientY;
+    ox = parseInt(el.style.left, 10) || 0; oy = parseInt(el.style.top, 10) || 0;
+    var mv = function(e2) {
+      el.style.left = (ox + e2.clientX - sx) + 'px';
+      el.style.top = (oy + e2.clientY - sy) + 'px';
+    };
+    var up = function() {
+      el.classList.remove('dragging');
+      document.removeEventListener('mousemove', mv);
+      document.removeEventListener('mouseup', up);
+      if (typeof onDragEnd === 'function') onDragEnd(el.id);
+    };
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
   });
 }
 
@@ -978,7 +1077,7 @@ function pasteFromClipboard() {
   navigator.clipboard.readText().then(function(text) {
     if (!text || !text.trim()) { showToast('El portapapeles está vacío'); return; }
     lastActivityTime = Date.now();
-    if (typeof petJump !== 'undefined') petJump = 18;
+    triggerPetPasteAnimation();
     try {
       const detected = detectSyntax(text);
       const filename = generateFilename(detected);
@@ -1010,6 +1109,7 @@ document.addEventListener('paste', function(e) {
             const fr = new FileReader();
             fr.onload = function(ev) {
               try {
+                triggerPetPasteAnimation();
                 createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: (file.name||'').split('.').pop()||'png', size: file.size });
                 tryGrowPetFromShare();
                 saveCardsToStorage();
@@ -1026,7 +1126,7 @@ document.addEventListener('paste', function(e) {
     if (text.trim()) {
       e.preventDefault();
       lastActivityTime = Date.now();
-      petJump = 18;
+      triggerPetPasteAnimation();
       try {
         const detected = detectSyntax(text);
         const filename = generateFilename(detected);
@@ -1123,11 +1223,156 @@ function showToastWithUndo(msg, onUndo, dur=6000) {
   setTimeout(()=>{ t.classList.remove('show'); t.innerHTML=''; }, dur);
 }
 
+// ========== SUPABASE REALTIME (presencia + sync tarjetas) ==========
+function updatePresenceUI() {
+  var elCount = document.getElementById('userCount');
+  var elList = document.getElementById('connectedUsersList');
+  var elLabel = document.getElementById('userCountLabel');
+  if (!elCount) return;
+  if (!supabaseChannel) {
+    elCount.textContent = totalUsers;
+    if (elLabel) elLabel.textContent = 'en sesión';
+    if (elList) elList.textContent = '';
+    return;
+  }
+  var state = supabaseChannel.presenceState();
+  var names = [];
+  Object.keys(state).forEach(function(key) {
+    (state[key] || []).forEach(function(p) {
+      if (p.user_name) names.push(p.user_name);
+    });
+  });
+  names = names.filter(function(n, i, a) { return a.indexOf(n) === i; });
+  var n = names.length;
+  elCount.textContent = n || '0';
+  if (elLabel) elLabel.textContent = n === 1 ? 'en sesión' : 'en sesión';
+  if (elList) elList.textContent = n > 0 ? names.join(', ') : '';
+}
+
+function applyCardFromRemote(row) {
+  if (!row || !row.card_id) return;
+  if (cards[row.card_id]) return;
+  var item = {
+    id: row.card_id,
+    content: row.content,
+    type: row.type || 'code',
+    meta: row.meta || {},
+    left: row.left_pos != null ? row.left_pos : PAD,
+    top: row.top_pos != null ? row.top_pos : PAD
+  };
+  appendCardFromItem(item);
+  updateSpaceBadges();
+  updateAccentFromBoard();
+  saveCardsToStorage();
+}
+
+function loadCardsFromSupabase() {
+  var inner = document.getElementById('canvasInner');
+  if (!inner || !supabaseClient) return Promise.resolve();
+  return supabaseClient.from('pizarron_cards').select('*').eq('room_id', SESSION_ID).then(function(res) {
+    if (res.error) {
+      console.warn('Supabase fetch:', res.error);
+      return;
+    }
+    var list = res.data || [];
+    var id;
+    for (id in cards) { if (cards.hasOwnProperty(id)) delete cards[id]; }
+    inner.innerHTML = '';
+    list.forEach(function(row) {
+      applyCardFromRemote(row);
+    });
+    updateSpaceBadges();
+    updateAccentFromBoard();
+  });
+}
+
+function initSupabaseRealtime() {
+  if (!supabaseClient) return;
+  var channelName = 'room-' + SESSION_ID.replace(/[^a-zA-Z0-9-_]/g, '-');
+  supabaseChannel = supabaseClient.channel(channelName)
+    .on('presence', { event: 'sync' }, updatePresenceUI)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'pizarron_cards',
+      filter: 'room_id=eq.' + SESSION_ID
+    }, function(payload) {
+      if (payload && payload.new) applyCardFromRemote(payload.new);
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'pizarron_cards',
+      filter: 'room_id=eq.' + SESSION_ID
+    }, function(payload) {
+      if (!payload || !payload.new) return;
+      var id = payload.new.card_id;
+      var el = document.getElementById(id);
+      if (el) {
+        el.style.left = (payload.new.left_pos != null ? payload.new.left_pos : 0) + 'px';
+        el.style.top = (payload.new.top_pos != null ? payload.new.top_pos : 0) + 'px';
+      }
+    })
+    .on('postgres_changes', {
+      event: 'DELETE',
+      schema: 'public',
+      table: 'pizarron_cards'
+    }, function(payload) {
+      if (!payload || !payload.old || payload.old.room_id !== SESSION_ID) return;
+      var id = payload.old.card_id;
+      var el = document.getElementById(id);
+      if (el) { el.remove(); }
+      delete cards[id];
+      updateSpaceBadges();
+      updateAccentFromBoard();
+      saveCardsToStorage();
+    })
+    .subscribe(function(status) {
+      if (status === 'SUBSCRIBED') {
+        supabaseChannel.track({
+          user_id: PRESENCE_USER_ID,
+          user_name: getOrPromptUsername()
+        });
+        loadCardsFromSupabase().then(updatePresenceUI);
+      }
+    });
+
+  syncCardToSupabase = function(id) {
+    if (!supabaseClient || !cards[id]) return;
+    var el = document.getElementById(id);
+    var leftPos = el ? (parseInt(el.style.left, 10) || 0) : 0;
+    var topPos = el ? (parseInt(el.style.top, 10) || 0) : 0;
+    var content = cards[id].content;
+    if (typeof content === 'string' && content.length > MAX_SYNC_CONTENT)
+      content = content.substr(0, MAX_SYNC_CONTENT) + '...[truncado]';
+    supabaseClient.from('pizarron_cards').upsert({
+      room_id: SESSION_ID,
+      card_id: id,
+      content: content,
+      type: cards[id].type,
+      meta: cards[id].meta || {},
+      left_pos: leftPos,
+      top_pos: topPos
+    }, { onConflict: 'room_id,card_id' }).then(function() {});
+  };
+
+  syncCardPositionToSupabase = function(id) {
+    if (!supabaseClient) return;
+    var el = document.getElementById(id);
+    if (!el) return;
+    var leftPos = parseInt(el.style.left, 10) || 0;
+    var topPos = parseInt(el.style.top, 10) || 0;
+    supabaseClient.from('pizarron_cards').update({ left_pos: leftPos, top_pos: topPos })
+      .eq('room_id', SESSION_ID).eq('card_id', id).then(function() {});
+  };
+}
+
 // ========== ON JOIN ==========
 if (session.isJoining) {
-  setTimeout(()=>{
-    showToast(`✓ Conectado a ${SESSION_ID}`);
+  setTimeout(function() {
+    showToast('✓ Conectado a ' + SESSION_ID);
     updateUserCount();
+    triggerPetGreeting();
   }, 600);
 }
 
@@ -1138,25 +1383,25 @@ function initCards() {
     setTimeout(initCards, 50);
     return;
   }
-  if (!loadCardsFromStorage()) {
-    setTimeout(function() {
-      createCard(
-        'SELECT u.id, u.name, COUNT(o.id) AS total_orders\nFROM users u\nLEFT JOIN orders o ON o.user_id = u.id\nWHERE u.active = 1\nGROUP BY u.id\nORDER BY total_orders DESC\nLIMIT 10;',
-        'code', { detected: { lang: 'sql', ext: 'sql', label: 'SQL' }, filename: 'un_coso_veloz.sql', userName: 'Pizarrón' });
-    }, 100);
-    setTimeout(function() {
-      createCard(
-        "import { useState } from 'react'\n\nexport default function Card({ title, body }) {\n  const [open, setOpen] = useState(false)\n\n  return (\n    <div className=\"card\">\n      <h2 onClick={() => setOpen(!open)}>{title}</h2>\n      {open && <p>{body}</p>}\n    </div>\n  )\n}",
-        'code', { detected: { lang: 'jsx', ext: 'jsx', label: 'JSX' }, filename: 'un_coso_nuevo.jsx', userName: 'Pizarrón' });
-    }, 450);
-    setTimeout(function() {
-      createCard('', 'file', { name: 'diseño_final_v3.figma', ext: 'figma', size: 2400000, userName: 'Pizarrón' });
-    }, 800);
+  if (supabaseClient) {
+    initSupabaseRealtime();
+    return;
   }
-  setTimeout(updateAccentFromBoard, 900);
+  loadCardsFromStorage();
+  setTimeout(updateAccentFromBoard, 100);
 }
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initCards);
+  document.addEventListener('DOMContentLoaded', function() {
+    if (supabaseClient) {
+      initSupabaseRealtime();
+    } else {
+      initCards();
+    }
+  });
 } else {
-  initCards();
+  if (supabaseClient) {
+    initSupabaseRealtime();
+  } else {
+    initCards();
+  }
 }

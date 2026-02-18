@@ -12,3 +12,10 @@ desktop.ini
 # Logs
 *.log
 npm-debug.log*
+
+# Credenciales y config local (nunca subir a GitHub)
+config.supabase.js
+.env
+.env.local
+.env.*.local
+*.local.js

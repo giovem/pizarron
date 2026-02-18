@@ -20,25 +20,36 @@ Abre `pizarron.html` en el navegador. No requiere servidor.
 - **Archivos**: arrastrar al tablero o clic en + para elegir archivos.
 - **Nombre**: la primera vez que agregues algo se pedirá tu nombre (se guarda en el navegador).
 
+### Tiempo real en local (entre varios navegadores)
+
+Para probar el tiempo real sin depender de Netlify:
+
+1. **Configura Supabase** (si aún no): crea proyecto en [Supabase](https://supabase.com), ejecuta `supabase-setup.sql`.
+2. **Credenciales en local:** copia `config.supabase.example.js` → `config.supabase.js` y rellena `url` y `anonKey` (Project Settings → API).
+3. **Sirve la carpeta por HTTP** (no abras el HTML como archivo; hace falta un servidor para cargar `config.supabase.js`):
+   - `npm start` (o `npx serve .`) y abre **http://localhost:3000**
+   - O con Python: `python -m http.server 8080` y abre **http://localhost:8080**
+4. En esa pestaña pulsa **Compartir** y copia el enlace.
+5. Abre **el mismo enlace** en otra pestaña o en otro navegador (o en otro PC de la red usando tu IP, ej. http://192.168.1.10:3000/?session=SES-XXX).
+6. Deberías ver **"● En vivo"** en la barra. Lo que uno pegue lo verá el otro al instante.
+
 ## Despliegue (Netlify)
 
 1. Conecta el repositorio en [Netlify](https://app.netlify.com).
 2. **Build command:** `node scripts/inject-env.js` (ya está en `netlify.toml`).
-3. **Variables de entorno:** Site settings → Environment variables → añade `SUPABASE_URL` y `SUPABASE_ANON_KEY` con tus valores de Supabase (Project Settings → API).
-4. **Publish directory:** `.` (raíz).
-5. La raíz (`/`) sirve el pizarrón gracias al redirect en `netlify.toml`.
+3. **Publish directory:** `.` (raíz).
+4. La raíz (`/`) sirve el pizarrón gracias al redirect en `netlify.toml`.
+
+**Tiempo real:** Guía completa en **[CONFIGURACION-TIEMPO-REAL.md](CONFIGURACION-TIEMPO-REAL.md)** (Supabase + variables en Netlify).
 
 Los datos (sesión, nombre, mascota) se guardan en el navegador (localStorage) por origen; cada despliegue tiene su propia “instancia”.
 
-### Tiempo real con Supabase (opcional)
+### Tiempo real (Supabase + Netlify)
 
-Para que **varios usuarios con el mismo enlace vean al instante lo que se pega** (compartir información en vivo):
+- **Netlify:** Site configuration → Environment variables → `SUPABASE_URL` y `SUPABASE_ANON_KEY` → Trigger deploy.
+- **Supabase:** Ejecutar `supabase-setup.sql`; comprobar tabla en Replication; usar anon key en Netlify.
 
-1. Crea un proyecto en [Supabase](https://supabase.com).
-2. En el SQL Editor ejecuta todo el contenido de `supabase-setup.sql`.
-3. **Credenciales de forma segura (variables de entorno):** En el repo no hay credenciales; en el HTML hay placeholders `__SUPABASE_URL__` y `__SUPABASE_ANON_KEY__`. En **Netlify** define las variables de entorno `SUPABASE_URL` y `SUPABASE_ANON_KEY`; el comando de build las inyecta en el HTML al desplegar. Así puedes subir el proyecto a GitHub sin exponer la anon key. En **local** usa `config.supabase.js` (copiado del example y rellenado) o pega temporalmente en el HTML para probar.
-
-Cuando la sincronización esté activa verás **"● En vivo"** en la barra superior y el número de usuarios conectados. Mismo enlace = misma sala = todos ven lo que se pega al instante.
+Guía paso a paso: [CONFIGURACION-TIEMPO-REAL.md](CONFIGURACION-TIEMPO-REAL.md).
 
 ## Tecnologías
 

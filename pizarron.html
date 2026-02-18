@@ -751,21 +751,39 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- Supabase: reemplazado en build por variables de entorno SUPABASE_URL y SUPABASE_ANON_KEY (no subas credenciales a Git). -->
+<!-- Bootstrap: en localhost carga config.supabase.js para tiempo real; en Netlify usa placeholders (env vars en build). -->
 <script>
-  window.PIZARRON_SUPABASE = {
-    url: '__SUPABASE_URL__',
-    anonKey: '__SUPABASE_ANON_KEY__'
-  };
-</script>
-<script>
-  if (!window.PIZARRON_SUPABASE.url && document.querySelector('meta[name="pizarron:supabase-url"]')) {
+(function() {
+  window.PIZARRON_SUPABASE = window.PIZARRON_SUPABASE || { url: '__SUPABASE_URL__', anonKey: '__SUPABASE_ANON_KEY__' };
+  var isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.protocol === 'file:');
+  function applyMeta() {
+    if (window.PIZARRON_SUPABASE.url && window.PIZARRON_SUPABASE.url.indexOf('__') === -1) return;
     var m = document.querySelector('meta[name="pizarron:supabase-url"]');
     var k = document.querySelector('meta[name="pizarron:supabase-anonkey"]');
-    if (m && k) window.PIZARRON_SUPABASE = { url: m.getAttribute('content') || '', anonKey: k.getAttribute('content') || '' };
+    if (m && k && m.getAttribute('content')) window.PIZARRON_SUPABASE = { url: m.getAttribute('content'), anonKey: k.getAttribute('content') || '' };
   }
+  function loadSupabaseThenPizarron() {
+    applyMeta();
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+    s.onload = function() {
+      var p = document.createElement('script');
+      p.src = 'pizarron.js';
+      p.defer = true;
+      document.body.appendChild(p);
+    };
+    document.body.appendChild(s);
+  }
+  if (isLocal) {
+    var c = document.createElement('script');
+    c.src = 'config.supabase.js';
+    c.onload = loadSupabaseThenPizarron;
+    c.onerror = loadSupabaseThenPizarron;
+    document.body.appendChild(c);
+  } else {
+    loadSupabaseThenPizarron();
+  }
+})();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="pizarron.js" defer></script>
 </body>
 </html>

@@ -73,17 +73,19 @@ function updateRestoreButtonVisibility() {
 function switchSpace(space) {
   if (!SPACES[space]) return;
   currentSpace = space;
-  const url = new URL(window.location.href);
+  var url = new URL(window.location.href);
   url.searchParams.set('space', space);
   window.history.replaceState({}, '', url);
-  document.querySelectorAll('.sidebar-btn').forEach(btn => {
+  document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.dataset.space === space);
   });
-  document.getElementById('spaceLabel').textContent = SPACES[space];
+  var labelEl = document.getElementById('spaceLabel');
+  if (labelEl) labelEl.textContent = SPACES[space];
   refreshSpaceVisibility();
   updateSpaceBadges();
   updateAccentFromBoard();
   updateRestoreButtonVisibility();
+  showToast('Pizarrón: ' + SPACES[space]);
 }
 
 function refreshSpaceVisibility() {
@@ -95,9 +97,9 @@ function refreshSpaceVisibility() {
 function updateSpaceBadges() {
   if (!cards) return;
   var counts = {};
-  Object.keys(SPACES).forEach(s => { counts[s] = 0; });
-  Object.keys(cards).forEach(id => {
-    const s = cards[id].space || 'general';
+  Object.keys(SPACES).forEach(function(s) { counts[s] = 0; });
+  Object.keys(cards).forEach(function(id) {
+    var s = (cards[id].meta && cards[id].meta.space) || cards[id].space || 'general';
     if (counts[s] !== undefined) counts[s]++;
   });
   document.querySelectorAll('.sidebar-btn').forEach(btn => {
@@ -185,18 +187,18 @@ const P  = 5; // one pixel block = 5px
 const CW = BC.width;
 const CH = BC.height;
 
-// Color palette
+// Color palette (azul)
 const COL = {
-  b1: '#22dd66',  // body main
-  b2: '#119944',  // body alt
-  b3: '#55ff99',  // highlight
-  leg:'#0d8833',
+  b1: '#1a8fd9',  // body main
+  b2: '#0d6bb8',  // body alt
+  b3: '#5eb8ff',  // highlight
+  leg:'#0a5a8a',
   eye:'#ffffff',
-  pup:'#001a00',
-  ant:'#00ff88',
-  wng:'rgba(0,255,136,0.2)',
+  pup:'#001a2e',
+  ant:'#22aaff',
+  wng:'rgba(34,170,255,0.25)',
   crw:'#ffcc00',
-  glo:'rgba(0,255,136,0.12)',
+  glo:'rgba(34,170,255,0.15)',
 };
 
 function fp(x, y, w, h, color) {
@@ -237,7 +239,7 @@ function drawBug(lv, frame, mood) {
   // glow when mood > 0
   if (mood > 0.2) {
     bx.save();
-    bx.shadowColor = '#00ff88';
+    bx.shadowColor = '#22aaff';
     bx.shadowBlur  = 16 * mood;
   }
 
@@ -247,7 +249,7 @@ function drawBug(lv, frame, mood) {
     bx.globalAlpha = 0.22 + Math.sin(frame * 0.4) * 0.08;
     const wX = baseX + segs * P;
     const wY = bodyY - P;
-    bx.fillStyle = '#00ff88';
+    bx.fillStyle = '#22aaff';
     bx.beginPath();
     bx.ellipse(wX - P*3, wY, P*4, P*2, -0.35, 0, Math.PI*2);
     bx.fill();
@@ -425,14 +427,15 @@ switchSpace(currentSpace);
 
 // ========== COLOR POR LENGUAJE DOMINANTE ==========
 const LANG_ACCENT = {
-  sql: '#4488ff', jsx: '#00ff88', js: '#ffdc00', json: '#ff9632',
+  sql: '#4488ff', jsx: '#22aaff', js: '#ffdc00', json: '#ff9632',
   py: '#64b4ff', css: '#c864ff', txt: '#555570', file: '#ff4466'
 };
 function getDominantLanguage() {
   if (!cards) return null;
   var count = {};
-  Object.keys(cards).forEach(id => {
-    if (cards[id].space !== currentSpace) return;
+  Object.keys(cards).forEach(function(id) {
+    var cardSpace = (cards[id].meta && cards[id].meta.space) || cards[id].space || 'general';
+    if (cardSpace !== currentSpace) return;
     const lang = cards[id].type === 'file' ? 'file' : (cards[id].meta?.detected?.lang || 'txt');
     count[lang] = (count[lang] || 0) + 1;
   });
@@ -444,7 +447,7 @@ function getDominantLanguage() {
 }
 function updateAccentFromBoard() {
   const lang = getDominantLanguage();
-  const color = lang ? (LANG_ACCENT[lang] || '#00ff88') : '#00ff88';
+  const color = lang ? (LANG_ACCENT[lang] || '#22aaff') : '#22aaff';
   document.documentElement.style.setProperty('--accent', color);
 }
 
@@ -542,6 +545,7 @@ function loadCardsFromStorage() {
         cards[id] = { content: item.content, type: item.type || 'code', meta: item.meta || {} };
         var meta = cards[id].meta;
         meta.space = meta.space || 'general';
+        cards[id].space = meta.space;
         var left = (item.left != null ? item.left : PAD) + 'px';
         var top = (item.top != null ? item.top : PAD) + 'px';
         var userNameEsc = esc(meta.userName || 'Anónimo');
@@ -683,7 +687,7 @@ function createCard(content, type, meta) {
 
   inner.appendChild(div);
   makeDraggable(div);
-  cards[id] = {content, type, meta};
+  cards[id] = { content: content, type: type, meta: meta, space: meta.space };
   div.classList.add('card-pulse');
   setTimeout(() => div.classList.remove('card-pulse'), 2200);
   updateSpaceBadges();
@@ -788,11 +792,16 @@ function clearAll() {
   if (!cards) return;
   clearedCardsBuffer[currentSpace] = [];
   var buf = clearedCardsBuffer[currentSpace];
-  Object.keys(cards).forEach(id => {
-    if (cards[id].space !== currentSpace) return;
-    const el = document.getElementById(id);
+  var space = currentSpace;
+  var idsToRemove = [];
+  Object.keys(cards).forEach(function(id) {
+    var cardSpace = (cards[id].meta && cards[id].meta.space) || cards[id].space || 'general';
+    if (cardSpace === space) idsToRemove.push(id);
+  });
+  idsToRemove.forEach(function(id) {
+    var el = document.getElementById(id);
     if (el) {
-      buf.push({ id, el, data: { ...cards[id] } });
+      buf.push({ id: id, el: el, data: Object.assign({}, cards[id], { space: (cards[id].meta && cards[id].meta.space) || 'general' }) });
       el.remove();
     }
     delete cards[id];
@@ -1076,7 +1085,7 @@ function shareSession() {
 
 // ========== TOAST ==========
 function triggerCelebration() {
-  const colors = ['#00ff88', '#ff4466', '#4488ff', '#ffdc00', '#ff9632', '#c864ff', '#64b4ff'];
+  const colors = ['#22aaff', '#ff4466', '#4488ff', '#ffdc00', '#ff9632', '#c864ff', '#64b4ff'];
   const count = 28;
   for (let i = 0; i < count; i++) {
     const el = document.createElement('div');

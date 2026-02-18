@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%2300ff88' width='32' height='32' rx='4'/></svg>" type="image/svg+xml">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%2322aaff' width='32' height='32' rx='4'/></svg>" type="image/svg+xml">
 <title>PIZARRÓN EPEM— Tablero Colaborativo</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap');
@@ -15,7 +15,7 @@
     --bg: #0a0a0f;
     --surface: #111118;
     --border: #1e1e2e;
-    --accent: #00ff88;
+    --accent: #22aaff;
     --accent2: #ff4466;
     --accent3: #4488ff;
     --text: #e8e8f0;
@@ -39,8 +39,8 @@
     position: fixed;
     inset: 0;
     background-image:
-      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(34,170,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,170,255,0.06) 1px, transparent 1px);
     background-size: 40px 40px;
     pointer-events: none;
     z-index: 0;
@@ -74,7 +74,7 @@
     transition: all 0.15s;
   }
   .sidebar-btn:hover { background: var(--border); color: var(--text); }
-  .sidebar-btn.active { background: rgba(0,255,136,0.12); color: var(--accent); border: 1px solid rgba(0,255,136,0.3); }
+  .sidebar-btn.active { background: rgba(34,170,255,0.12); color: var(--accent); border: 1px solid rgba(34,170,255,0.35); }
   .sidebar-btn .badge {
     position: absolute;
     top: 2px; right: 2px;
@@ -129,8 +129,8 @@
     font-family: 'Space Mono', monospace;
     font-size: 11px;
     color: var(--accent);
-    border: 1px solid rgba(0,255,136,0.3);
-    background: rgba(0,255,136,0.05);
+    border: 1px solid rgba(34,170,255,0.35);
+    background: rgba(34,170,255,0.06);
     padding: 3px 10px;
     border-radius: 4px;
     flex-shrink: 0;
@@ -178,7 +178,7 @@
   }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
   .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
-  .btn.primary:hover { background: #00cc6f; }
+  .btn.primary:hover { background: #1a8fd9; }
 
   .canvas {
     position: fixed;
@@ -198,7 +198,7 @@
     position: fixed;
     top: 52px; left: 56px; right: 0; bottom: 0;
     border: 3px dashed var(--accent);
-    background: rgba(0,255,136,0.05);
+    background: rgba(34,170,255,0.06);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -240,7 +240,7 @@
   }
   @keyframes card-pulse {
     0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,0.4); border-color: var(--border); }
-    50% { box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(0,255,136,0.4); border-color: var(--accent); }
+    50% { box-shadow: 0 0 0 3px var(--accent), 0 0 24px rgba(34,170,255,0.4); border-color: var(--accent); }
   }
 
   .card-header {
@@ -260,7 +260,7 @@
     letter-spacing: 0.5px;
   }
   .lang-sql  { background: rgba(68,136,255,0.15); color: var(--accent3); border: 1px solid rgba(68,136,255,0.3); }
-  .lang-jsx  { background: rgba(0,255,136,0.1); color: var(--accent); border: 1px solid rgba(0,255,136,0.2); }
+  .lang-jsx  { background: rgba(34,170,255,0.1); color: var(--accent); border: 1px solid rgba(34,170,255,0.25); }
   .lang-js   { background: rgba(255,220,0,0.1); color: #ffdc00; border: 1px solid rgba(255,220,0,0.2); }
   .lang-json { background: rgba(255,150,50,0.1); color: #ff9632; border: 1px solid rgba(255,150,50,0.2); }
   .lang-py   { background: rgba(100,180,255,0.1); color: #64b4ff; border: 1px solid rgba(100,180,255,0.2); }
@@ -335,7 +335,7 @@
     text-decoration: underline;
     text-underline-offset: 2px;
   }
-  .card-download:hover { color: #00cc6f; }
+  .card-download:hover { color: #1a8fd9; }
 
   .file-icon { font-size: 32px; display: block; margin-bottom: 8px; }
   .file-meta { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); line-height: 1.6; }
@@ -376,7 +376,7 @@
     pointer-events: auto;
     transition: all 0.15s;
   }
-  .paste-btn:hover { background: rgba(0,255,136,0.15); }
+  .paste-btn:hover { background: rgba(34,170,255,0.15); }
   @keyframes float {
     0%, 100% { transform: translateX(-50%) translateY(0); }
     50%       { transform: translateX(-50%) translateY(-4px); }
@@ -413,11 +413,11 @@
     font-size: 22px;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 20px rgba(0,255,136,0.3);
+    box-shadow: 0 4px 20px rgba(34,170,255,0.35);
     z-index: 900;
     transition: transform 0.15s, box-shadow 0.15s;
   }
-  .new-card-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(0,255,136,0.5); }
+  .new-card-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(34,170,255,0.5); }
 
   /* ============ PIXEL BUG PET ============ */
   .pet-container {
@@ -462,7 +462,7 @@
     pointer-events: none;
     z-index: 960;
     animation: pop-up 1.4s ease-out forwards;
-    text-shadow: 0 0 8px rgba(0,255,136,0.8);
+    text-shadow: 0 0 8px rgba(34,170,255,0.8);
   }
   @keyframes pop-up {
     0%   { opacity: 0; transform: translateY(0) scale(0.7); }
@@ -537,7 +537,7 @@
   .manual-btn:hover {
     border-color: var(--accent);
     color: var(--accent);
-    background: rgba(0,255,136,0.06);
+    background: rgba(34,170,255,0.06);
   }
 
   .manual-overlay {

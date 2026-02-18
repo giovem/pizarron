@@ -155,28 +155,57 @@ function updateSpaceBadges() {
 // ========== NOMBRE DE USUARIO ==========
 const USERNAME_KEY = 'pz_username';
 function getOrPromptUsername() {
-  let name = (localStorage.getItem(USERNAME_KEY) || '').trim();
-  if (!name) {
-    name = (prompt('¿Tu nombre? (aparecerá en lo que subas al pizarrón)') || 'Anónimo').trim().slice(0, 40) || 'Anónimo';
+  var name = (localStorage.getItem(USERNAME_KEY) || '').trim();
+  if (!name || name === 'Anónimo') {
+    name = (prompt('¿Cómo te llamas? (nombre o apodo para el pizarrón)') || '').trim().slice(0, 40);
+    if (!name) name = 'Anónimo';
     localStorage.setItem(USERNAME_KEY, name);
     updateUsernameDisplay();
   }
   return name || 'Anónimo';
 }
 function setUsername(newName) {
-  const n = (newName || '').trim().slice(0, 40) || 'Anónimo';
+  var n = (newName || '').trim().slice(0, 40) || 'Anónimo';
   localStorage.setItem(USERNAME_KEY, n);
   updateUsernameDisplay();
 }
+function promptUsername() {
+  var current = (localStorage.getItem(USERNAME_KEY) || 'Anónimo').trim() || '';
+  if (current === 'Anónimo') current = '';
+  var name = prompt('Tu nombre o apodo:', current);
+  if (name !== null) setUsername(name);
+}
 function updateUsernameDisplay() {
-  const el = document.getElementById('usernameDisplay');
+  var el = document.getElementById('usernameDisplay');
+  var editBtn = document.getElementById('usernameEditBtn');
   if (el) el.textContent = (localStorage.getItem(USERNAME_KEY) || 'Anónimo').trim() || 'Anónimo';
 }
 updateUsernameDisplay();
-document.getElementById('usernameDisplay').addEventListener('click', function() {
-  const name = prompt('Tu nombre:', localStorage.getItem(USERNAME_KEY) || '');
-  if (name !== null) setUsername(name);
-});
+// Clic en el nombre o en "Editar" para cambiar
+var usernameDisplayEl = document.getElementById('usernameDisplay');
+if (usernameDisplayEl) {
+  usernameDisplayEl.addEventListener('click', function() { promptUsername(); });
+  usernameDisplayEl.setAttribute('role', 'button');
+  usernameDisplayEl.setAttribute('tabindex', '0');
+  usernameDisplayEl.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); promptUsername(); } });
+}
+var usernameEditBtn = document.getElementById('usernameEditBtn');
+if (usernameEditBtn) usernameEditBtn.addEventListener('click', function(e) { e.stopPropagation(); promptUsername(); });
+// Usuario nuevo: pedir nombre al cargar si nunca lo ha puesto
+(function() {
+  var stored = (localStorage.getItem(USERNAME_KEY) || '').trim();
+  if (stored === '') {
+    setTimeout(function() {
+      var n = (prompt('Bienvenido al pizarrón. ¿Cómo te llamas? (nombre o apodo)') || '').trim().slice(0, 40);
+      if (n) {
+        localStorage.setItem(USERNAME_KEY, n);
+      } else {
+        localStorage.setItem(USERNAME_KEY, 'Anónimo');
+      }
+      updateUsernameDisplay();
+    }, 400);
+  }
+})();
 
 // Days counter (never expires)
 function updateDays() {
@@ -1371,10 +1400,9 @@ function updatePresenceUI() {
   var elCount = document.getElementById('userCount');
   var elLabel = document.getElementById('userCountLabel');
   var listEl = document.getElementById('presenceUserList');
-  if (!elCount) return;
   if (!supabaseChannel) {
     setLiveIndicator(false);
-    elCount.textContent = totalUsers;
+    if (elCount) elCount.textContent = totalUsers;
     if (elLabel) elLabel.textContent = 'en sesión';
     if (listEl) listEl.innerHTML = '';
     return;
@@ -1388,7 +1416,7 @@ function updatePresenceUI() {
   });
   names = names.filter(function(n, i, a) { return a.indexOf(n) === i; });
   var n = names.length;
-  elCount.textContent = n || '0';
+  if (elCount) elCount.textContent = n || '0';
   if (elLabel) elLabel.textContent = n === 1 ? 'en sesión' : 'en sesión';
   if (listEl) {
     listEl.innerHTML = '';

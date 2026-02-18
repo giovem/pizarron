@@ -95,6 +95,32 @@
     justify-content: center;
   }
   .sidebar-btn[title] { cursor: help; }
+  .sidebar-btn { position: relative; }
+  .sidebar-btn-label {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 10px;
+    padding: 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 1002;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .sidebar-btn:hover .sidebar-btn-label,
+  .sidebar-btn:focus .sidebar-btn-label {
+    opacity: 1;
+  }
 
   .topbar {
     position: fixed;
@@ -141,65 +167,6 @@
     flex-shrink: 0;
   }
 
-  .users-count {
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    color: var(--text);
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px 4px 6px;
-    border-radius: 6px;
-    background: rgba(107, 91, 158, 0.12);
-    border: 1px solid rgba(107, 91, 158, 0.3);
-  }
-  .users-count-icon { font-size: 14px; line-height: 1; opacity: 0.9; }
-  .users-count .user-count-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    height: 22px;
-    padding: 0 6px;
-    font-size: 13px;
-    font-weight: 800;
-    color: #fff;
-    background: linear-gradient(135deg, #6b5b9e 0%, #534780 100%);
-    border-radius: 6px;
-    line-height: 1;
-  }
-  .users-count strong { color: var(--text); font-weight: 600; }
-  .users-count .user-count-label { color: var(--muted); font-weight: 400; font-size: 11px; }
-  .connected-users-list {
-    display: none; /* Solo se muestra el nombre del usuario actual (arriba en la columna derecha) */
-  }
-  .connected-users-list::before { content: none; }
-  .users-count .live-sep { width: 1px; height: 14px; background: var(--border); margin: 0 6px; flex-shrink: 0; }
-  .live-indicator {
-    font-size: 11px;
-    color: var(--accent);
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .live-indicator::before {
-    content: '';
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    background: var(--accent);
-    border-radius: 50%;
-    box-shadow: 0 0 8px var(--accent);
-    animation: live-pulse 1.5s ease-in-out infinite;
-    flex-shrink: 0;
-  }
-  @keyframes live-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.9); } }
-  @media (max-width: 900px) { .users-count .live-sep { margin: 0 4px; } }
-  .share-hint { font-size: 10px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
-  @media (max-width: 1100px) { .share-hint { display: none; } }
-
   .username-display {
     font-family: 'Space Mono', monospace;
     font-size: 11px;
@@ -213,23 +180,37 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+  .username-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
   .username-display:hover { border-color: var(--border); color: var(--text); }
   .username-display::before { content: '👤 '; }
+  .username-edit-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+  }
+  .username-edit-btn:hover {
+    color: var(--accent);
+    background: rgba(34,170,255,0.12);
+  }
 
   .spacer { flex: 1; }
 
   .username-next-to-day { margin-left: 4px; }
-  .topbar-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
-    flex-shrink: 0;
-    margin-left: 12px;
-    padding-left: 12px;
-    border-left: 1px solid var(--border);
-  }
-  .topbar-right .users-count { justify-content: flex-end; }
 
   .btn {
     font-family: 'Space Mono', monospace;
@@ -253,67 +234,68 @@
     position: fixed;
     top: 52px;
     right: 0;
-    width: 200px;
+    width: 150px;
     bottom: 0;
     background: var(--surface);
     border-left: 1px solid var(--border);
     z-index: 100;
     display: flex;
     flex-direction: column;
-    padding: 12px 0;
+    padding: 8px 0;
     overflow: hidden;
   }
   .presence-sidebar-title {
     font-family: 'Space Mono', monospace;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--muted);
-    padding: 0 14px 10px;
+    padding: 0 10px 6px;
     border-bottom: 1px solid var(--border);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     flex-shrink: 0;
   }
   .presence-user-list {
     list-style: none;
     margin: 0;
-    padding: 0 8px;
+    padding: 0 6px;
     overflow-y: auto;
     flex: 1;
   }
   .presence-user-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    border-radius: 6px;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
     font-family: 'Space Mono', monospace;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text);
-    margin-bottom: 2px;
+    margin-bottom: 1px;
   }
   .presence-user-item .presence-user-icon {
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: rgba(107, 91, 158, 0.25);
     color: var(--accent);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 11px;
     flex-shrink: 0;
   }
   .presence-user-item .presence-user-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 3em;
   }
 
   .canvas {
     position: fixed;
-    top: 52px; left: 56px; right: 200px; bottom: 0;
+    top: 52px; left: 56px; right: 150px; bottom: 0;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
     z-index: 1;
@@ -328,7 +310,7 @@
 
   .drop-overlay {
     position: fixed;
-    top: 52px; left: 56px; right: 200px; bottom: 0;
+    top: 52px; left: 56px; right: 150px; bottom: 0;
     border: 3px dashed var(--accent);
     background: rgba(34,170,255,0.06);
     display: flex;
@@ -885,6 +867,14 @@
       height: 44px;
       flex-shrink: 0;
     }
+    .sidebar-btn-label {
+      left: 50%;
+      bottom: 100%;
+      top: auto;
+      margin-left: 0;
+      margin-bottom: 8px;
+      transform: translateX(-50%) translateY(0);
+    }
     .topbar {
       left: 0;
       padding: 0 10px;
@@ -918,20 +908,6 @@
     .topbar .btn {
       padding: 6px 10px;
       font-size: 10px;
-    }
-    .topbar-right {
-      margin-left: 4px;
-      padding-left: 8px;
-      border-left-width: 1px;
-    }
-    .users-count {
-      padding: 2px 6px;
-      font-size: 11px;
-    }
-    .users-count .user-count-badge {
-      min-width: 20px;
-      height: 20px;
-      font-size: 11px;
     }
     .canvas,
     .drop-overlay {
@@ -1018,7 +994,6 @@
     .days-badge { font-size: 9px; padding: 2px 6px; }
     .username-next-to-day { max-width: 56px; font-size: 9px; }
     .topbar .btn { padding: 5px 8px; font-size: 9px; }
-    .users-count .user-count-label { display: none; }
     .card {
       min-width: 160px;
       max-width: calc(100vw - 16px);
@@ -1060,12 +1035,12 @@
 
 <!-- SIDEBAR DEPARTAMENTOS -->
 <nav class="sidebar" id="sidebar">
-  <button class="sidebar-btn active" id="space-general" data-space="general" title="General" onclick="switchSpace('general')">📋</button>
-  <button class="sidebar-btn" id="space-soporte" data-space="soporte" title="Soporte" onclick="switchSpace('soporte')">🎧</button>
-  <button class="sidebar-btn" id="space-desarrollo" data-space="desarrollo" title="Desarrollo" onclick="switchSpace('desarrollo')">💻</button>
-  <button class="sidebar-btn" id="space-procesos" data-space="procesos" title="Procesos" onclick="switchSpace('procesos')">🔄</button>
-  <button class="sidebar-btn" id="space-infra" data-space="infra" title="Infraestructura" onclick="switchSpace('infra')">🖥️</button>
-  <button class="sidebar-btn" id="space-bi" data-space="bi" title="BI" onclick="switchSpace('bi')">📊</button>
+  <button class="sidebar-btn active" id="space-general" data-space="general" title="General" onclick="switchSpace('general')">📋<span class="sidebar-btn-label">General</span></button>
+  <button class="sidebar-btn" id="space-soporte" data-space="soporte" title="Soporte" onclick="switchSpace('soporte')">🎧<span class="sidebar-btn-label">Soporte</span></button>
+  <button class="sidebar-btn" id="space-desarrollo" data-space="desarrollo" title="Desarrollo" onclick="switchSpace('desarrollo')">💻<span class="sidebar-btn-label">Desarrollo</span></button>
+  <button class="sidebar-btn" id="space-procesos" data-space="procesos" title="Procesos" onclick="switchSpace('procesos')">🔄<span class="sidebar-btn-label">Procesos</span></button>
+  <button class="sidebar-btn" id="space-infra" data-space="infra" title="Infraestructura" onclick="switchSpace('infra')">🖥️<span class="sidebar-btn-label">Infraestructura</span></button>
+  <button class="sidebar-btn" id="space-bi" data-space="bi" title="BI" onclick="switchSpace('bi')">📊<span class="sidebar-btn-label">BI</span></button>
 </nav>
 
 <!-- TOP BAR -->
@@ -1074,27 +1049,20 @@
   <span class="session-id" id="spaceLabel" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">General</span>
   <div class="session-id" id="sessionId" title="Clic para copiar enlace de esta sala" role="button" tabindex="0">SES-XXXXXX</div>
   <div class="days-badge" id="daysBadge">📅 día 1</div>
-  <span class="username-display username-next-to-day" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
+  <span class="username-wrapper">
+    <span class="username-display username-next-to-day" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
+    <button type="button" class="username-edit-btn" id="usernameEditBtn" title="Cambiar nombre">✎</button>
+  </span>
   <div class="spacer"></div>
   <button class="btn" onclick="organizeCardsInGrid()">Organizar</button>
   <button class="btn" onclick="clearAll()">Limpiar</button>
   <button class="btn" id="restoreBtn" onclick="restoreCleared()" style="display:none;">↩ Restaurar</button>
   <button class="btn primary" onclick="shareSession()" title="Copia el enlace. Quien lo abra verá en vivo lo que se pegue aquí.">🔗 Compartir</button>
-  <span class="share-hint" id="shareHint">Mismo enlace = todos ven en vivo</span>
-  <div class="topbar-right">
-    <div class="users-count" id="usersCountContainer" title="Usuarios conectados a este pizarrón en tiempo real">
-      <span class="users-count-icon" aria-hidden="true">👥</span>
-      <span class="user-count-badge" id="userCount">1</span>
-      <span id="userCountLabel" class="user-count-label">en sesión</span>
-      <span class="live-sep" id="liveSep" style="display:none;" aria-hidden="true"></span>
-      <span id="liveIndicator" class="live-indicator" style="display:none;" title="Sincronización en vivo activa">En vivo</span>
-    </div>
-  </div>
 </div>
 
 <!-- Barra derecha: usuarios conectados (presencia en tiempo real) -->
-<aside class="presence-sidebar" id="presenceSidebar" aria-label="Usuarios en sesión">
-  <div class="presence-sidebar-title">En sesión</div>
+<aside class="presence-sidebar" id="presenceSidebar" aria-label="Usuarios en línea">
+  <div class="presence-sidebar-title">EN LINEA</div>
   <ul class="presence-user-list" id="presenceUserList"></ul>
 </aside>
 

@@ -47,6 +47,16 @@ let currentSpace = (function() {
   return (p && SPACES[p]) ? p : 'general';
 })();
 
+// Declarar cards y cardCounter al inicio para evitar "Cannot access before initialization"
+let cardCounter = 0;
+const cards = {};
+const PAD = 16;
+const CARDS_STORAGE_KEY = 'pz_cards_' + SESSION_ID;
+const MAX_STORED_FILE_SIZE = 800 * 1024;
+const CELL_W = 280;
+const CELL_H = 300;
+const CARD_GAP = 12;
+
 var clearedCardsBuffer = {};
 function initClearedBuffer() {
   Object.keys(SPACES).forEach(s => { clearedCardsBuffer[s] = []; });
@@ -408,16 +418,6 @@ function generateFilename(lang) {
   const adj = ['veloz','nuevo','temporal','draft','beta','rapido'][Math.floor(Math.random()*6)];
   return `un_coso_${adj}.${lang.ext}`;
 }
-
-// ========== CARDS (declarar antes de switchSpace/updateSpaceBadges) ==========
-let cardCounter = 0;
-const cards = {};
-const PAD = 16;
-const CARDS_STORAGE_KEY = 'pz_cards_' + SESSION_ID;
-const MAX_STORED_FILE_SIZE = 800 * 1024; // 800KB por archivo para no llenar localStorage
-const CELL_W = 280;
-const CELL_H = 300;
-const CARD_GAP = 12;
 
 switchSpace(currentSpace);
 

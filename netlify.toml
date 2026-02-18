@@ -2,7 +2,8 @@
 
 [build]
   publish = "."
-  # Sin comando de build: sitio estático
+  command = "node scripts/inject-env.js"
+  # Define en Netlify: SUPABASE_URL y SUPABASE_ANON_KEY (variables de entorno)
 
 # La raíz (/) sirve el contenido de pizarron.html sin cambiar la URL
 [[redirects]]

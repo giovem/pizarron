@@ -748,14 +748,20 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- Supabase: local = config.supabase.js (no se sube a Git). Producción = descomenta el bloque de abajo o usa meta tags pizarron:supabase-url y pizarron:supabase-anonkey. -->
-<script src="config.supabase.js"></script>
-<!-- Producción (si no usas config file): descomenta y pega tu URL y anon key -->
-<!--
+<!-- Supabase: reemplazado en build por variables de entorno SUPABASE_URL y SUPABASE_ANON_KEY (no subas credenciales a Git). -->
 <script>
-  window.PIZARRON_SUPABASE = { url: 'https://TU_PROYECTO.supabase.co', anonKey: 'TU_ANON_KEY' };
+  window.PIZARRON_SUPABASE = {
+    url: '__SUPABASE_URL__',
+    anonKey: '__SUPABASE_ANON_KEY__'
+  };
 </script>
--->
+<script>
+  if (!window.PIZARRON_SUPABASE.url && document.querySelector('meta[name="pizarron:supabase-url"]')) {
+    var m = document.querySelector('meta[name="pizarron:supabase-url"]');
+    var k = document.querySelector('meta[name="pizarron:supabase-anonkey"]');
+    if (m && k) window.PIZARRON_SUPABASE = { url: m.getAttribute('content') || '', anonKey: k.getAttribute('content') || '' };
+  }
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="pizarron.js" defer></script>
 </body>

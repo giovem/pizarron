@@ -20,18 +20,13 @@ Abre `pizarron.html` en el navegador. No requiere servidor.
 - **Archivos**: arrastrar al tablero o clic en + para elegir archivos.
 - **Nombre**: la primera vez que agregues algo se pedirá tu nombre (se guarda en el navegador).
 
-## Despliegue
+## Despliegue (Netlify)
 
-### Vercel
-1. Conecta este repositorio en [Vercel](https://vercel.com).
-2. No configures build: es un proyecto estático.
-3. La raíz (`/`) sirve el pizarrón gracias a `vercel.json`.
-
-### Netlify
-1. Conecta este repositorio en [Netlify](https://app.netlify.com).
-2. **Build command**: deja vacío.
-3. **Publish directory**: `.` (raíz del repo).
-4. La raíz (`/`) sirve el pizarrón gracias a `netlify.toml` (redirect 200 a `/pizarron.html`).
+1. Conecta el repositorio en [Netlify](https://app.netlify.com).
+2. **Build command:** `node scripts/inject-env.js` (ya está en `netlify.toml`).
+3. **Variables de entorno:** Site settings → Environment variables → añade `SUPABASE_URL` y `SUPABASE_ANON_KEY` con tus valores de Supabase (Project Settings → API).
+4. **Publish directory:** `.` (raíz).
+5. La raíz (`/`) sirve el pizarrón gracias al redirect en `netlify.toml`.
 
 Los datos (sesión, nombre, mascota) se guardan en el navegador (localStorage) por origen; cada despliegue tiene su propia “instancia”.
 
@@ -41,11 +36,7 @@ Para que **varios usuarios con el mismo enlace vean al instante lo que se pega**
 
 1. Crea un proyecto en [Supabase](https://supabase.com).
 2. En el SQL Editor ejecuta todo el contenido de `supabase-setup.sql`.
-3. **Credenciales:**
-   - **Local:** copia `config.supabase.example.js` → `config.supabase.js`, rellena `url` y `anonKey` (Anon Key Legacy). Ese archivo no se sube a Git.
-   - **Producción (Netlify/Vercel/etc.):** como `config.supabase.js` no está en el repo, define las credenciales de una de estas formas:
-     - En `pizarron.html` descomenta el bloque `<script>window.PIZARRON_SUPABASE = { url: '...', anonKey: '...' };</script>` y pega tu URL y anon key (o inyéctalas con variables de entorno en el build).
-     - O añade en el `<head>`: `<meta name="pizarron:supabase-url" content="https://TU_PROYECTO.supabase.co">` y `<meta name="pizarron:supabase-anonkey" content="TU_ANON_KEY">`.
+3. **Credenciales de forma segura (variables de entorno):** En el repo no hay credenciales; en el HTML hay placeholders `__SUPABASE_URL__` y `__SUPABASE_ANON_KEY__`. En **Netlify** define las variables de entorno `SUPABASE_URL` y `SUPABASE_ANON_KEY`; el comando de build las inyecta en el HTML al desplegar. Así puedes subir el proyecto a GitHub sin exponer la anon key. En **local** usa `config.supabase.js` (copiado del example y rellenado) o pega temporalmente en el HTML para probar.
 
 Cuando la sincronización esté activa verás **"● En vivo"** en la barra superior y el número de usuarios conectados. Mismo enlace = misma sala = todos ven lo que se pega al instante.
 

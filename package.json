@@ -1,0 +1,7 @@
+{
+  "name": "pizarron",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/inject-env.js"
+  }
+}

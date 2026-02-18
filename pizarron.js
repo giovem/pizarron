@@ -43,13 +43,26 @@ var supabaseChannel = null;
 var PRESENCE_USER_ID = 'pz-' + Math.random().toString(36).substr(2, 9);
 var MAX_SYNC_CONTENT = 200000; // truncar contenido mayor para sync
 
-if (typeof window !== 'undefined' && window.PIZARRON_SUPABASE && window.PIZARRON_SUPABASE.url && window.PIZARRON_SUPABASE.anonKey && typeof window.supabase !== 'undefined') {
-  try {
-    supabaseClient = window.supabase.createClient(window.PIZARRON_SUPABASE.url, window.PIZARRON_SUPABASE.anonKey);
-  } catch (e) {
-    console.warn('Supabase init:', e);
+(function initSupabaseConfig() {
+  if (typeof window === 'undefined') return;
+  if (!window.PIZARRON_SUPABASE || !window.PIZARRON_SUPABASE.url) {
+    var metaUrl = document.querySelector('meta[name="pizarron:supabase-url"]');
+    var metaKey = document.querySelector('meta[name="pizarron:supabase-anonkey"]');
+    if (metaUrl && metaKey && metaUrl.getAttribute('content') && metaKey.getAttribute('content')) {
+      window.PIZARRON_SUPABASE = {
+        url: metaUrl.getAttribute('content'),
+        anonKey: metaKey.getAttribute('content')
+      };
+    }
   }
-}
+  if (window.PIZARRON_SUPABASE && window.PIZARRON_SUPABASE.url && window.PIZARRON_SUPABASE.anonKey && typeof window.supabase !== 'undefined') {
+    try {
+      supabaseClient = window.supabase.createClient(window.PIZARRON_SUPABASE.url, window.PIZARRON_SUPABASE.anonKey);
+    } catch (e) {
+      console.warn('Supabase init:', e);
+    }
+  }
+})();
 var syncCardPositionToSupabase = function() {};
 var syncCardToSupabase = function() {};
 
@@ -1224,12 +1237,18 @@ function showToastWithUndo(msg, onUndo, dur=6000) {
 }
 
 // ========== SUPABASE REALTIME (presencia + sync tarjetas) ==========
+function setLiveIndicator(connected) {
+  var el = document.getElementById('liveIndicator');
+  if (el) el.style.display = connected ? '' : 'none';
+}
+
 function updatePresenceUI() {
   var elCount = document.getElementById('userCount');
   var elList = document.getElementById('connectedUsersList');
   var elLabel = document.getElementById('userCountLabel');
   if (!elCount) return;
   if (!supabaseChannel) {
+    setLiveIndicator(false);
     elCount.textContent = totalUsers;
     if (elLabel) elLabel.textContent = 'en sesión';
     if (elList) elList.textContent = '';
@@ -1289,23 +1308,24 @@ function loadCardsFromSupabase() {
 function initSupabaseRealtime() {
   if (!supabaseClient) return;
   var channelName = 'room-' + SESSION_ID.replace(/[^a-zA-Z0-9-_]/g, '-');
+  var roomId = SESSION_ID;
+
   supabaseChannel = supabaseClient.channel(channelName)
     .on('presence', { event: 'sync' }, updatePresenceUI)
     .on('postgres_changes', {
       event: 'INSERT',
       schema: 'public',
-      table: 'pizarron_cards',
-      filter: 'room_id=eq.' + SESSION_ID
+      table: 'pizarron_cards'
     }, function(payload) {
-      if (payload && payload.new) applyCardFromRemote(payload.new);
+      if (!payload || !payload.new || payload.new.room_id !== roomId) return;
+      applyCardFromRemote(payload.new);
     })
     .on('postgres_changes', {
       event: 'UPDATE',
       schema: 'public',
-      table: 'pizarron_cards',
-      filter: 'room_id=eq.' + SESSION_ID
+      table: 'pizarron_cards'
     }, function(payload) {
-      if (!payload || !payload.new) return;
+      if (!payload || !payload.new || payload.new.room_id !== roomId) return;
       var id = payload.new.card_id;
       var el = document.getElementById(id);
       if (el) {
@@ -1318,7 +1338,7 @@ function initSupabaseRealtime() {
       schema: 'public',
       table: 'pizarron_cards'
     }, function(payload) {
-      if (!payload || !payload.old || payload.old.room_id !== SESSION_ID) return;
+      if (!payload || !payload.old || payload.old.room_id !== roomId) return;
       var id = payload.old.card_id;
       var el = document.getElementById(id);
       if (el) { el.remove(); }
@@ -1333,7 +1353,13 @@ function initSupabaseRealtime() {
           user_id: PRESENCE_USER_ID,
           user_name: getOrPromptUsername()
         });
-        loadCardsFromSupabase().then(updatePresenceUI);
+        loadCardsFromSupabase().then(function() {
+          updatePresenceUI();
+          setLiveIndicator(true);
+        });
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        setLiveIndicator(false);
+        console.warn('Supabase Realtime:', status);
       }
     });
 
@@ -1353,7 +1379,11 @@ function initSupabaseRealtime() {
       meta: cards[id].meta || {},
       left_pos: leftPos,
       top_pos: topPos
-    }, { onConflict: 'room_id,card_id' }).then(function() {});
+    }, { onConflict: 'room_id,card_id' }).then(function(r) {
+      if (r.error) console.warn('Supabase sync card:', r.error);
+    }).catch(function(e) {
+      console.warn('Supabase sync error:', e);
+    });
   };
 
   syncCardPositionToSupabase = function(id) {

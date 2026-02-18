@@ -37,16 +37,17 @@ Los datos (sesión, nombre, mascota) se guardan en el navegador (localStorage) p
 
 ### Tiempo real con Supabase (opcional)
 
-Para que **cualquier usuario vea quién está conectado** y **lo que uno carga lo vean todos**:
+Para que **varios usuarios con el mismo enlace vean al instante lo que se pega** (compartir información en vivo):
 
 1. Crea un proyecto en [Supabase](https://supabase.com).
 2. En el SQL Editor ejecuta todo el contenido de `supabase-setup.sql`.
-3. **Credenciales sin subirlas a GitHub:**
-   - Copia `config.supabase.example.js` → `config.supabase.js`.
-   - En `config.supabase.js` rellena `url` y `anonKey` (Project Settings → API; usa la **Anon Key Legacy**).
-   - El archivo `config.supabase.js` está en `.gitignore` y **no se sube** al repositorio.
+3. **Credenciales:**
+   - **Local:** copia `config.supabase.example.js` → `config.supabase.js`, rellena `url` y `anonKey` (Anon Key Legacy). Ese archivo no se sube a Git.
+   - **Producción (Netlify/Vercel/etc.):** como `config.supabase.js` no está en el repo, define las credenciales de una de estas formas:
+     - En `pizarron.html` descomenta el bloque `<script>window.PIZARRON_SUPABASE = { url: '...', anonKey: '...' };</script>` y pega tu URL y anon key (o inyéctalas con variables de entorno en el build).
+     - O añade en el `<head>`: `<meta name="pizarron:supabase-url" content="https://TU_PROYECTO.supabase.co">` y `<meta name="pizarron:supabase-anonkey" content="TU_ANON_KEY">`.
 
-Con eso, "N en sesión" mostrará los usuarios conectados en vivo y las tarjetas se sincronizarán entre todos.
+Cuando la sincronización esté activa verás **"● En vivo"** en la barra superior y el número de usuarios conectados. Mismo enlace = misma sala = todos ven lo que se pega al instante.
 
 ## Tecnologías
 

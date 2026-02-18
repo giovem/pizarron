@@ -145,6 +145,9 @@
   .users-count strong { color: var(--text); }
   .connected-users-list { margin-left: 6px; color: var(--muted); font-weight: 400; }
   .connected-users-list::before { content: ': '; }
+  .live-indicator { margin-left: 8px; font-size: 10px; color: var(--accent); font-weight: 700; }
+  .live-indicator::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; margin-right: 4px; vertical-align: middle; animation: live-pulse 1.5s ease-in-out infinite; }
+  @keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   @media (max-width: 900px) { .connected-users-list { display: none; } }
 
   .username-display {
@@ -681,7 +684,7 @@
   <span class="session-id" id="spaceLabel" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;">General</span>
   <div class="session-id" id="sessionId">SES-XXXXXX</div>
   <div class="days-badge" id="daysBadge">📅 día 1</div>
-  <div class="users-count" id="usersCountContainer" title="Usuarios conectados a este pizarrón en tiempo real">👥 <strong id="userCount">1</strong> <span id="userCountLabel">en sesión</span><span id="connectedUsersList" class="connected-users-list"></span></div>
+  <div class="users-count" id="usersCountContainer" title="Usuarios conectados a este pizarrón en tiempo real">👥 <strong id="userCount">1</strong> <span id="userCountLabel">en sesión</span><span id="connectedUsersList" class="connected-users-list"></span><span id="liveIndicator" class="live-indicator" style="display:none;" title="Sincronización en vivo activa">● En vivo</span></div>
   <span class="username-display" id="usernameDisplay" title="Clic para cambiar nombre">Anónimo</span>
   <div class="spacer"></div>
   <button class="btn" onclick="organizeCardsInGrid()">Organizar</button>
@@ -745,8 +748,14 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- Supabase (opcional): copia config.supabase.example.js a config.supabase.js y rellena. Ese archivo no se sube a Git. -->
+<!-- Supabase: local = config.supabase.js (no se sube a Git). Producción = descomenta el bloque de abajo o usa meta tags pizarron:supabase-url y pizarron:supabase-anonkey. -->
 <script src="config.supabase.js"></script>
+<!-- Producción (si no usas config file): descomenta y pega tu URL y anon key -->
+<!--
+<script>
+  window.PIZARRON_SUPABASE = { url: 'https://TU_PROYECTO.supabase.co', anonKey: 'TU_ANON_KEY' };
+</script>
+-->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="pizarron.js" defer></script>
 </body>

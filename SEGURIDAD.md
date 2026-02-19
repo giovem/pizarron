@@ -1,6 +1,6 @@
 # Seguridad: qué tener en cuenta
 
-Resumen de aspectos de seguridad según cómo uses el pizarrón (local, Netlify + Supabase) y qué hacer en cada caso.
+Resumen de aspectos de seguridad según cómo uses el pizarrón (local, Cloudflare + Supabase) y qué hacer en cada caso.
 
 ---
 
@@ -53,10 +53,10 @@ Resumen de aspectos de seguridad según cómo uses el pizarrón (local, Netlify 
 
 ---
 
-## 3. Netlify + Supabase
+## 3. Cloudflare + Supabase
 
 ### Claves y API
-- La **anon key** de Supabase se inyecta en el HTML en el build (variables de entorno en Netlify). Cualquier usuario que abra la web puede verla en el código.
+- La **anon key** de Supabase se inyecta en el HTML en el build (Variables and secrets en Cloudflare). Cualquier usuario que abra la web puede verla en el código.
 - Con esa anon key, alguien podría llamar a la API de Supabase (tablas, Storage) dentro de los permisos que da la política RLS.
 
 ### Políticas RLS (base de datos)
@@ -67,7 +67,7 @@ Resumen de aspectos de seguridad según cómo uses el pizarrón (local, Netlify 
 - Bucket público: lectura pública; escritura con anon key.
 - **Conclusión:** cualquier URL de archivo que conozcas puede ser abierta por quien la tenga; no hay lista “privada” de archivos sin autenticación adicional.
 
-### Resumen Netlify + Supabase
+### Resumen Cloudflare + Supabase
 | Aspecto        | Situación actual        | Qué tener en cuenta                          |
 |----------------|-------------------------|----------------------------------------------|
 | Anon key       | Visible en el front     | Normal en apps públicas; permisos vía RLS   |
@@ -90,7 +90,7 @@ Resumen de aspectos de seguridad según cómo uses el pizarrón (local, Netlify 
 - Servidor local: aceptable si asumes que la red y el PC son de confianza.
 - No publicar el enlace (ni la IP:puerto) fuera de ese entorno.
 
-**Uso público en Internet (Netlify):**
+**Uso público en Internet (Cloudflare):**
 - Asumir que cualquier persona con la URL del sitio (y de la sala) puede ver y editar ese pizarrón.
 - No guardar datos sensibles (contraseñas, datos personales, secretos) en tarjetas o archivos subidos.
 - Si en el futuro quieres “solo mi equipo”: habría que añadir autenticación (ej. Supabase Auth) y políticas RLS por usuario o por sala.
@@ -107,4 +107,4 @@ Resumen de aspectos de seguridad según cómo uses el pizarrón (local, Netlify 
 - **Supabase:** políticas RLS más estrictas (por ejemplo, solo ciertos `room_id` o usuarios autenticados).
 - **HTTPS en local:** poner un proxy reverso (nginx, Caddy) con certificado autofirmado o Let’s Encrypt en una máquina con dominio, si quieres cifrado incluso en LAN.
 
-Si indicas en qué entorno lo usas (solo LAN, Netlify público, etc.), se puede concretar más qué aplicar en tu caso.
+Si indicas en qué entorno lo usas (solo LAN, Cloudflare público, etc.), se puede concretar más qué aplicar en tu caso.

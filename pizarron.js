@@ -1953,7 +1953,7 @@ if (session.isJoining) {
     if (supabaseClient) {
       showToast('Usa «Compartir» y abre ese enlace en otros navegadores para ver en vivo.');
     } else if (location.hostname && location.hostname !== 'localhost' && location.protocol !== 'file:') {
-      showToast('Tiempo real: configura SUPABASE_URL y SUPABASE_ANON_KEY en Netlify.', 5000);
+      showToast('Tiempo real: configura SUPABASE_URL y SUPABASE_ANON_KEY en Cloudflare (Variables and secrets).', 5000);
     }
   }, 1500);
 }

@@ -13,9 +13,16 @@ desktop.ini
 *.log
 npm-debug.log*
 
+# Dependencias (npm install las genera)
+node_modules/
+
 # Credenciales y config local (nunca subir a GitHub)
 config.supabase.js
 .env
 .env.local
 .env.*.local
 *.local.js
+
+# Datos del servidor local (npm run local)
+data/
+data/uploads/

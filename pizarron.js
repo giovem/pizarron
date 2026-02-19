@@ -95,8 +95,34 @@ function uploadFileToStorage(file, onDone) {
   }).catch(function() { onDone(null); });
 }
 
+function uploadFileToLocal(file, onDone) {
+  if (!file) { onDone(null); return; }
+  var reader = new FileReader();
+  reader.onload = function() {
+    var dataUrl = reader.result;
+    fetch('/api/rooms/' + encodeURIComponent(SESSION_ID) + '/files', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: dataUrl, name: file.name || 'file', type: file.type || '' })
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if (data && data.url) {
+        var base = location.origin || (location.protocol + '//' + location.host);
+        onDone(base + data.url);
+      } else {
+        onDone(null);
+      }
+    }).catch(function() { onDone(null); });
+  };
+  reader.onerror = function() { onDone(null); };
+  reader.readAsDataURL(file);
+}
+
 var syncCardPositionToSupabase = function() {};
 var syncCardToSupabase = function() {};
+
+var useLocalBackend = false;
+var localWs = null;
+var localPresenceNames = [];
 
 // Espacios o departamentos del pizarrón (General, Soporte, etc.)
 const SPACES = {
@@ -990,7 +1016,9 @@ function removeCard(id) {
       updateSpaceBadges();
       updateAccentFromBoard();
       saveCardsToStorage();
-      if (supabaseClient) {
+      if (useLocalBackend) {
+        fetch('/api/rooms/' + encodeURIComponent(SESSION_ID) + '/cards/' + encodeURIComponent(id), { method: 'DELETE' }).catch(function() {});
+      } else if (supabaseClient) {
         supabaseClient.from('pizarron_cards').delete().eq('room_id', SESSION_ID).eq('card_id', id).then(function() {});
       }
     }, 200);
@@ -1121,7 +1149,11 @@ function clearAll() {
     }
     delete cards[id];
   });
-  if (supabaseClient) {
+  if (useLocalBackend) {
+    idsToRemove.forEach(function(id) {
+      fetch('/api/rooms/' + encodeURIComponent(SESSION_ID) + '/cards/' + encodeURIComponent(id), { method: 'DELETE' }).catch(function() {});
+    });
+  } else if (supabaseClient) {
     idsToRemove.forEach(function(id) {
       supabaseClient.from('pizarron_cards').delete().eq('room_id', SESSION_ID).eq('card_id', id).then(function() {});
     });
@@ -1282,7 +1314,35 @@ function addFileToBoard(file) {
       r.readAsText(file);
     } else {
       var isImageOrVideo = file.type && (file.type.indexOf('image/') === 0 || file.type.indexOf('video/') === 0);
-      if (supabaseClient && isImageOrVideo) {
+      if (useLocalBackend && isImageOrVideo) {
+        uploadFileToLocal(file, function(publicUrl) {
+          if (publicUrl) {
+            try {
+              createCard(publicUrl, 'file', { name: file.name, ext: ext, size: file.size, storageUrl: true });
+              tryGrowPetFromShare();
+              saveCardsToStorage();
+              triggerPetGreetUser();
+              showToast('✓ ' + file.name + ' (otros podrán descargarlo)');
+            } catch (err) {
+              console.warn(err);
+              showToast('Error al agregar ' + file.name);
+            }
+          } else {
+            var fr = new FileReader();
+            fr.onload = function(ev) {
+              try {
+                createCard(ev.target.result, 'file', { name: file.name, ext: ext, size: file.size });
+                tryGrowPetFromShare();
+                saveCardsToStorage();
+                triggerPetGreetUser();
+                showToast('📁 ' + file.name);
+              } catch (err) { console.warn(err); showToast('Error al agregar ' + file.name); }
+            };
+            fr.onerror = function() { showToast('No se pudo leer ' + file.name); };
+            fr.readAsDataURL(file);
+          }
+        });
+      } else if (supabaseClient && isImageOrVideo) {
         uploadFileToStorage(file, function(publicUrl) {
           if (publicUrl) {
             try {
@@ -1393,7 +1453,34 @@ document.addEventListener('paste', function(e) {
           if (file) {
             e.preventDefault();
             var ext = (file.name || '').split('.').pop() || 'png';
-            if (supabaseClient) {
+            function doCreateWithDataUrl(dataUrl) {
+              try {
+                triggerPetPasteAnimation();
+                triggerPetGreetUser();
+                createCard(dataUrl, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size });
+                tryGrowPetFromShare();
+                saveCardsToStorage();
+                showToast('📁 Imagen pegada');
+              } catch (err) { showToast('Error al pegar imagen'); }
+            }
+            if (useLocalBackend) {
+              uploadFileToLocal(file, function(publicUrl) {
+                if (publicUrl) {
+                  try {
+                    triggerPetPasteAnimation();
+                    triggerPetGreetUser();
+                    createCard(publicUrl, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size, storageUrl: true });
+                    tryGrowPetFromShare();
+                    saveCardsToStorage();
+                    showToast('📁 Imagen pegada (otros podrán descargarla)');
+                  } catch (err) { showToast('Error al pegar imagen'); }
+                } else {
+                  var fr = new FileReader();
+                  fr.onload = function(ev) { doCreateWithDataUrl(ev.target.result); };
+                  fr.readAsDataURL(file);
+                }
+              });
+            } else if (supabaseClient) {
               uploadFileToStorage(file, function(publicUrl) {
                 if (publicUrl) {
                   try {
@@ -1406,31 +1493,13 @@ document.addEventListener('paste', function(e) {
                   } catch (err) { showToast('Error al pegar imagen'); }
                 } else {
                   var fr = new FileReader();
-                  fr.onload = function(ev) {
-                    try {
-                      triggerPetPasteAnimation();
-                      triggerPetGreetUser();
-                      createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size });
-                      tryGrowPetFromShare();
-                      saveCardsToStorage();
-                      showToast('📁 Imagen pegada');
-                    } catch (err) { showToast('Error al pegar imagen'); }
-                  };
+                  fr.onload = function(ev) { doCreateWithDataUrl(ev.target.result); };
                   fr.readAsDataURL(file);
                 }
               });
             } else {
-              const fr = new FileReader();
-              fr.onload = function(ev) {
-                try {
-                  triggerPetPasteAnimation();
-                  triggerPetGreetUser();
-                  createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size });
-                  tryGrowPetFromShare();
-                  saveCardsToStorage();
-                  showToast('📁 Imagen pegada');
-                } catch (err) { showToast('Error al pegar imagen'); }
-              };
+              var fr = new FileReader();
+              fr.onload = function(ev) { doCreateWithDataUrl(ev.target.result); };
               fr.readAsDataURL(file);
             }
             return;
@@ -1598,6 +1667,23 @@ function updatePresenceUI() {
   var elCount = document.getElementById('userCount');
   var elLabel = document.getElementById('userCountLabel');
   var listEl = document.getElementById('presenceUserList');
+  if (useLocalBackend && localPresenceNames && localPresenceNames.length >= 0) {
+    setLiveIndicator(true);
+    var names = localPresenceNames.filter(function(n, i, a) { return a.indexOf(n) === i; });
+    var n = names.length;
+    if (elCount) elCount.textContent = n || '0';
+    if (elLabel) elLabel.textContent = n === 1 ? 'en sesión' : 'en sesión';
+    if (listEl) {
+      listEl.innerHTML = '';
+      names.forEach(function(name) {
+        var li = document.createElement('li');
+        li.className = 'presence-user-item';
+        li.innerHTML = '<span class="presence-user-icon" aria-hidden="true">👤</span><span class="presence-user-name">' + esc(name) + '</span>';
+        listEl.appendChild(li);
+      });
+    }
+    return;
+  }
   if (!supabaseChannel) {
     setLiveIndicator(false);
     if (elCount) elCount.textContent = totalUsers;
@@ -1644,6 +1730,92 @@ function applyCardFromRemote(row) {
   updateAccentFromBoard();
   saveCardsToStorage();
   showToast('✓ Tarjeta recibida en vivo', 2000);
+}
+
+// Carga todas las tarjetas de la sala desde el API local
+function loadCardsFromLocalBackend() {
+  var inner = document.getElementById('canvasInner');
+  if (!inner) return Promise.resolve();
+  return fetch('/api/rooms/' + encodeURIComponent(SESSION_ID) + '/cards').then(function(r) { return r.json(); }).then(function(list) {
+    var id;
+    for (id in cards) { if (cards.hasOwnProperty(id)) delete cards[id]; }
+    inner.innerHTML = '';
+    (list || []).forEach(function(row) {
+      applyCardFromRemote(row);
+    });
+    updateSpaceBadges();
+    updateAccentFromBoard();
+  }).catch(function() {});
+}
+
+// Conecta al backend local: carga tarjetas, WebSocket y asigna funciones de sync
+function initLocalBackend() {
+  var inner = document.getElementById('canvasInner');
+  if (!inner) {
+    setTimeout(initLocalBackend, 50);
+    return;
+  }
+  var roomId = SESSION_ID;
+  var wsScheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  var wsUrl = wsScheme + '//' + location.host + '/?room=' + encodeURIComponent(roomId) + '&user=' + encodeURIComponent(PRESENCE_USER_ID) + '&name=' + encodeURIComponent((localStorage.getItem(USERNAME_KEY) || 'Anónimo').trim() || 'Anónimo');
+  localWs = new WebSocket(wsUrl);
+  localWs.onmessage = function(e) {
+    try {
+      var msg = JSON.parse(e.data);
+      if (msg.type === 'card_added') {
+        if (msg.card && !cards[msg.card.card_id]) applyCardFromRemote(msg.card);
+      } else if (msg.type === 'card_moved') {
+        var el = document.getElementById(msg.card_id);
+        if (el) {
+          el.style.left = (msg.left_pos != null ? msg.left_pos : 0) + 'px';
+          el.style.top = (msg.top_pos != null ? msg.top_pos : 0) + 'px';
+        }
+      } else if (msg.type === 'card_deleted') {
+        var el = document.getElementById(msg.card_id);
+        if (el) { el.remove(); }
+        delete cards[msg.card_id];
+        updateSpaceBadges();
+        updateAccentFromBoard();
+        saveCardsToStorage();
+      } else if (msg.type === 'presence') {
+        localPresenceNames = msg.names || [];
+        updatePresenceUI();
+      }
+    } catch (err) {}
+  };
+  localWs.onopen = function() {
+    loadCardsFromLocalBackend().then(function() {
+      updatePresenceUI();
+      setLiveIndicator(true);
+    });
+  };
+  syncCardToSupabase = function(id) {
+    if (!cards[id]) return;
+    var el = document.getElementById(id);
+    var leftPos = el ? (parseInt(el.style.left, 10) || 0) : 0;
+    var topPos = el ? (parseInt(el.style.top, 10) || 0) : 0;
+    var content = cards[id].content;
+    if (typeof content === 'string' && content.length > MAX_SYNC_CONTENT) {
+      if (cards[id].type === 'file') content = null;
+      else content = content.substr(0, MAX_SYNC_CONTENT) + '...[truncado]';
+    }
+    fetch('/api/rooms/' + encodeURIComponent(SESSION_ID) + '/cards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ card_id: id, content: content, type: cards[id].type, meta: cards[id].meta || {}, left_pos: leftPos, top_pos: topPos })
+    }).catch(function() {});
+  };
+  syncCardPositionToSupabase = function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var leftPos = parseInt(el.style.left, 10) || 0;
+    var topPos = parseInt(el.style.top, 10) || 0;
+    fetch('/api/rooms/' + encodeURIComponent(SESSION_ID) + '/cards/' + encodeURIComponent(id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ left_pos: leftPos, top_pos: topPos })
+    }).catch(function() {});
+  };
 }
 
 // Carga todas las tarjetas de la sala desde Supabase y las dibuja
@@ -1786,7 +1958,7 @@ if (session.isJoining) {
   }, 1500);
 }
 
-// Inicializa tarjetas: con Supabase usa tiempo real, sino carga desde localStorage
+// Inicializa tarjetas: backend local, Supabase o localStorage
 function initCards() {
   var inner = document.getElementById('canvasInner');
   if (!inner) {
@@ -1800,18 +1972,26 @@ function initCards() {
   loadCardsFromStorage();
   setTimeout(updateAccentFromBoard, 100);
 }
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() {
+function tryInit() {
+  fetch('/api/status').then(function(r) { return r.json(); }).then(function(data) {
+    if (data && data.pizarron) {
+      useLocalBackend = true;
+      initLocalBackend();
+    } else if (supabaseClient) {
+      initSupabaseRealtime();
+    } else {
+      initCards();
+    }
+  }).catch(function() {
     if (supabaseClient) {
       initSupabaseRealtime();
     } else {
       initCards();
     }
   });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', tryInit);
 } else {
-  if (supabaseClient) {
-    initSupabaseRealtime();
-  } else {
-    initCards();
-  }
+  tryInit();
 }

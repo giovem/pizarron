@@ -16,6 +16,19 @@ Tablero colaborativo por departamentos: General, Soporte, Desarrollo, Procesos, 
 
 Abre `pizarron.html` en el navegador. No requiere servidor.
 
+### Modo 100% local (gratis, sin límites de hosting)
+
+Para usar el pizarrón en tu red local **sin Supabase ni Netlify** (todo gratis y sin salir de tu red):
+
+1. Instala dependencias (solo la primera vez): `npm install`
+2. Arranca el servidor local: `npm run local`
+3. Abre en el navegador: **http://localhost:3000**
+4. Pulsa **Compartir** y copia el enlace. En otros PCs (o pestañas) de la misma red abre **ese mismo enlace** (o desde otro PC usa **http://TU_IP:3000/?session=SES-XXXXX&created=...**).
+
+El servidor guarda las tarjetas en memoria y en `data/local-cards.json` (se crea solo). Todos los que abran la misma sala verán y editarán lo mismo en tiempo real. Imágenes y vídeos se guardan en `data/uploads/` y todos pueden descargarlos.
+
+**Oficina / seguridad (sin coste extra):** el servidor incluye límite de peticiones por IP, cabeceras de seguridad (XSS, clickjacking), validación de IDs y límite de tamaño de cuerpo. Opcional: `BIND_IP=192.168.1.10` para escuchar solo en esa interfaz; `PORT=3001` para otro puerto. Detalle en **SEGURIDAD.md**.
+
 - **Pegar**: Ctrl+V (o Cmd+V) para agregar código o imágenes.
 - **Archivos**: arrastrar al tablero o clic en + para elegir archivos.
 - **Nombre**: la primera vez que agregues algo se pedirá tu nombre (se guarda en el navegador).
@@ -54,3 +67,19 @@ Guía paso a paso: [CONFIGURACION-TIEMPO-REAL.md](CONFIGURACION-TIEMPO-REAL.md).
 ## Tecnologías
 
 HTML, CSS y JavaScript. Opcional: Supabase para tiempo real.
+
+## Archivos del repositorio (lo que se sube a GitHub)
+
+| Archivo | Uso |
+|---------|-----|
+| `pizarron.html`, `pizarron.js` | App principal |
+| `package.json`, `package-lock.json` | Dependencias (npm install) |
+| `netlify.toml` | Configuración Netlify |
+| `scripts/inject-env.js` | Build Netlify (inyecta variables) |
+| `scripts/local-server.js` | Servidor local (`npm run local`) |
+| `config.supabase.example.js` | Plantilla para Supabase (copiar a config.supabase.js) |
+| `supabase-setup.sql`, `supabase-storage.sql` | Scripts para Supabase |
+| `README.md`, `CONFIGURACION-TIEMPO-REAL.md`, `SEGURIDAD.md` | Documentación |
+| `.gitignore` | Excluye del repo lo que no debe subirse |
+
+**No se suben** (están en .gitignore): `node_modules/`, `config.supabase.js`, `.env`, `data/`.

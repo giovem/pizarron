@@ -1,0 +1,7 @@
+# Cloudflare: desplegar el directorio actual como sitio estático (Pages/Assets).
+# El build (inject-env.js) ya modificó pizarron.html en este directorio.
+name = "pizarron"
+compatibility_date = "2026-02-19"
+
+[assets]
+directory = "."

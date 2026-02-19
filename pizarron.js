@@ -3,10 +3,12 @@ if (typeof window !== 'undefined') {
   window.cards = window.cards || {};
   window.cardCounter = window.cardCounter || 0;
 }
+// Objeto que guarda todas las tarjetas por id
 var cards = typeof window !== 'undefined' ? window.cards : {};
+// Contador para generar ids unicos de tarjetas
 var cardCounter = typeof window !== 'undefined' ? window.cardCounter : 0;
 
-// ========== SESSION (persistent via localStorage + URL) ==========
+// Obtiene o crea la sesion actual usando la URL y localStorage
 function getOrCreateSession() {
   var urlParams = new URLSearchParams(window.location.search);
   var urlSes = urlParams.get('session');
@@ -51,11 +53,11 @@ if (sessionIdEl) {
   });
 }
 
-// ========== SUPABASE (opcional: tiempo real y presencia) ==========
+// Supabase: tiempo real y presencia (opcional)
 var supabaseClient = null;
 var supabaseChannel = null;
 var PRESENCE_USER_ID = 'pz-' + Math.random().toString(36).substr(2, 9);
-var MAX_SYNC_CONTENT = 200000; // truncar contenido mayor para sync
+var MAX_SYNC_CONTENT = 200000;
 
 (function initSupabaseConfig() {
   if (typeof window === 'undefined') return;
@@ -77,10 +79,26 @@ var MAX_SYNC_CONTENT = 200000; // truncar contenido mayor para sync
     }
   }
 })();
+
+var PIZARRON_STORAGE_BUCKET = 'pizarron-files';
+function uploadFileToStorage(file, onDone) {
+  if (!supabaseClient || !file) { onDone(null); return; }
+  var safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+  var path = SESSION_ID + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '-' + safeName;
+  supabaseClient.storage.from(PIZARRON_STORAGE_BUCKET).upload(path, file, {
+    contentType: file.type || 'application/octet-stream',
+    upsert: false
+  }).then(function(res) {
+    if (res.error) { onDone(null); return; }
+    var publicUrl = supabaseClient.storage.from(PIZARRON_STORAGE_BUCKET).getPublicUrl(res.data.path).data.publicUrl;
+    onDone(publicUrl);
+  }).catch(function() { onDone(null); });
+}
+
 var syncCardPositionToSupabase = function() {};
 var syncCardToSupabase = function() {};
 
-// ========== ESPACIOS / DEPARTAMENTOS ==========
+// Espacios o departamentos del pizarrón (General, Soporte, etc.)
 const SPACES = {
   general: 'General',
   soporte: 'Soporte',
@@ -89,6 +107,7 @@ const SPACES = {
   infra: 'Infraestructura',
   bi: 'BI'
 };
+// Espacio actual segun la URL o general por defecto
 let currentSpace = (function() {
   const p = new URLSearchParams(window.location.search).get('space');
   return (p && SPACES[p]) ? p : 'general';
@@ -107,12 +126,14 @@ function initClearedBuffer() {
 }
 initClearedBuffer();
 
+// Muestra u oculta el boton de restaurar segun si hay tarjetas borradas
 function updateRestoreButtonVisibility() {
   const btn = document.getElementById('restoreBtn');
   const n = (clearedCardsBuffer[currentSpace] || []).length;
   btn.style.display = n > 0 ? '' : 'none';
 }
 
+// Cambia al espacio indicado, actualiza URL y vista
 function switchSpace(space) {
   if (!SPACES[space]) return;
   currentSpace = space;
@@ -131,12 +152,14 @@ function switchSpace(space) {
   showToast('Pizarrón: ' + SPACES[space]);
 }
 
+// Oculta tarjetas de otros espacios y muestra solo las del espacio actual
 function refreshSpaceVisibility() {
   document.querySelectorAll('.card').forEach(el => {
     el.style.display = el.dataset.space === currentSpace ? '' : 'none';
   });
 }
 
+// Actualiza el numero en cada boton del sidebar (cantidad de tarjetas por espacio)
 function updateSpaceBadges() {
   if (!cards) return;
   var counts = {};
@@ -156,7 +179,7 @@ function updateSpaceBadges() {
   });
 }
 
-// ========== NOMBRE DE USUARIO ==========
+// Nombre de usuario guardado en localStorage y mostrado en la barra
 const USERNAME_KEY = 'pz_username';
 function getOrPromptUsername() {
   var name = (localStorage.getItem(USERNAME_KEY) || '').trim();
@@ -168,6 +191,7 @@ function getOrPromptUsername() {
   }
   return name || 'Anónimo';
 }
+// Guarda el nuevo nombre y actualiza presencia en Supabase si esta activo
 function setUsername(newName) {
   var n = (newName || '').trim().slice(0, 40) || 'Anónimo';
   localStorage.setItem(USERNAME_KEY, n);
@@ -215,13 +239,14 @@ if (usernameEditBtn) usernameEditBtn.addEventListener('click', function(e) { e.s
   }
 })();
 
-// Days counter (never expires)
+// Calcula el dia desde la creacion de la sesion (86400000 ms = 1 dia)
 function updateDays() {
   const days = Math.max(1, Math.floor((Date.now() - SESSION_START) / 86400000) + 1);
   document.getElementById('daysBadge').textContent = `📅 día ${days}`;
 }
 updateDays();
 
+// Muestra cantidad de usuarios: desde Supabase si hay canal, sino desde sesion local
 function updateUserCount() {
   if (supabaseChannel) {
     updatePresenceUI();
@@ -236,12 +261,11 @@ function updateUserCount() {
 }
 updateUserCount();
 
-// ========== PIXEL BUG PET ==========
+// Mascota pixel (GUSSI): canvas y contexto 2d
 const BC = document.getElementById('bugCanvas');
 const bx = BC.getContext('2d');
 bx.imageSmoothingEnabled = false;
 
-// Pet state — level grows 1 vez por día solo al compartir archivos/código
 const GUSSI_STORAGE_KEY = 'pz_gussi_' + SESSION_ID;
 function loadPetState() {
   try {
@@ -258,21 +282,20 @@ function savePetState(level, lastLevelUpDate) {
 }
 const petState = loadPetState();
 let petLevel = petState.level;
-let petMood  = 0;   // 0-1, decays
+let petMood  = 0;
 let petFrame = 0;
 let petWalkX = 0;
 let petDir   = 1;
 let lastTick = 0;
-let petJump  = 0;   // frames remaining for jump bounce
+let petJump  = 0;
 let petSleeping = false;
-const INACTIVITY_MS = 22000;  // dormir después de 22s sin actividad
+const INACTIVITY_MS = 22000;
 let lastActivityTime = Date.now();
 
-const P  = 5; // one pixel block = 5px
+const P  = 5;
 const CW = BC.width;
 const CH = BC.height;
 
-// Color palette (azul)
 const COL = {
   b1: '#1a8fd9',  // body main
   b2: '#0d6bb8',  // body alt
@@ -286,11 +309,13 @@ const COL = {
   glo:'rgba(34,170,255,0.15)',
 };
 
+// Dibuja un rectangulo de color en el canvas (bloque pixel)
 function fp(x, y, w, h, color) {
   bx.fillStyle = color;
   bx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
 }
 
+// Dibuja la mascota segun nivel, frame de animacion y animo
 function drawBug(lv, frame, mood) {
   bx.clearRect(0, 0, CW, CH);
 
@@ -419,8 +444,9 @@ function drawBug(lv, frame, mood) {
   if (jumpOffset > 0) bx.restore();
 }
 
+// Animacion del bicho: actualiza posicion, sueño y dibuja cada cierto tiempo
 function tickBug(ts) {
-  if (ts - lastTick > 180) {  // ~5.5 fps, chunky pixel feel
+  if (ts - lastTick > 180) {
     petFrame++;
     lastTick = ts;
 
@@ -451,6 +477,7 @@ function updatePetLabel() {
 }
 updatePetLabel();
 
+// Marca actividad para que la mascota no se duerma
 function recordActivity() {
   lastActivityTime = Date.now();
 }
@@ -459,6 +486,7 @@ document.addEventListener('keydown', recordActivity);
 document.addEventListener('click', recordActivity);
 document.addEventListener('paste', recordActivity);
 
+// Saludo inicial: salto y burbuja de texto
 function triggerPetGreeting() {
   if (typeof petJump !== 'undefined') petJump = 24;
   if (typeof petMood !== 'undefined') petMood = 1;
@@ -474,6 +502,7 @@ function triggerPetGreeting() {
   }
 }
 
+// Animacion cuando el usuario pega algo
 function triggerPetPasteAnimation() {
   if (typeof petJump !== 'undefined') petJump = 22;
   if (typeof petMood !== 'undefined') petMood = 0.95;
@@ -491,6 +520,7 @@ function triggerPetPasteAnimation() {
   }
 }
 
+// Sube nivel a la mascota y muestra mensaje flotante
 function growPet(msg) {
   petMood = 1.0;
   if (petLevel < 10) petLevel++;
@@ -509,7 +539,7 @@ function getTodayDate() {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-// Sube de nivel solo cuando se comparte archivo/código y como máximo 1 vez por día
+// Sube de nivel solo al compartir y como maximo una vez por dia
 function tryGrowPetFromShare() {
   if (petLevel >= 10) return;
   const today = getTodayDate();
@@ -518,7 +548,7 @@ function tryGrowPetFromShare() {
   growPet('✦ compartiste → +1 nivel');
 }
 
-// ========== SYNTAX DETECTION ==========
+// Detecta el lenguaje del texto para colorear y etiquetar la tarjeta
 function detectSyntax(text) {
   text = text.trim();
   if (/\b(SELECT|INSERT|UPDATE|DELETE|CREATE TABLE|ALTER|DROP|FROM|WHERE|JOIN|GROUP BY|ORDER BY)\b/i.test(text))
@@ -542,7 +572,7 @@ function generateFilename(lang) {
 
 switchSpace(currentSpace);
 
-// ========== COLOR POR LENGUAJE DOMINANTE ==========
+// Color del acento segun el lenguaje que mas tarjetas tenga en el espacio actual
 const LANG_ACCENT = {
   sql: '#4488ff', jsx: '#22aaff', js: '#ffdc00', json: '#ff9632',
   py: '#64b4ff', css: '#c864ff', txt: '#555570', file: '#ff4466'
@@ -568,6 +598,7 @@ function updateAccentFromBoard() {
   document.documentElement.style.setProperty('--accent', color);
 }
 
+// Ancho y alto disponibles para el lienzo
 function getViewportSize() {
   return {
     vw: Math.max(200, window.innerWidth - 56),
@@ -575,6 +606,7 @@ function getViewportSize() {
   };
 }
 
+// Celdas de la cuadricula que ya tienen una tarjeta
 function getUsedGridCells() {
   const inner = document.getElementById('canvasInner');
   const used = new Set();
@@ -591,6 +623,7 @@ function getUsedGridCells() {
   return used;
 }
 
+// Devuelve la proxima posicion libre en la cuadricula o una aleatoria
 function getNextGridPosition() {
   const { vw, vh } = getViewportSize();
   const maxCol = Math.max(1, Math.floor((vw - PAD * 2) / CELL_W));
@@ -610,6 +643,7 @@ function getNextGridPosition() {
   return { x, y };
 }
 
+// Guarda todas las tarjetas en localStorage para esta sesion
 function saveCardsToStorage() {
   if (!cards) return;
   try {
@@ -643,6 +677,7 @@ function saveCardsToStorage() {
   }
 }
 
+// Crea en el DOM una tarjeta a partir de un objeto guardado (carga o sync)
 function appendCardFromItem(item) {
   var id = item.id;
   if (!id || typeof id !== 'string') return false;
@@ -661,12 +696,21 @@ function appendCardFromItem(item) {
   var header = '', body = '', footer = '';
   if (item.type === 'file') {
     var fnEsc = esc(meta.name || 'archivo');
-    var isImg = item.content && typeof item.content === 'string' && item.content.indexOf('data:image/') === 0;
+    var fileContentOk = item.content && typeof item.content === 'string' && item.content.indexOf('...[truncado]') === -1;
+    var isStorageUrl = fileContentOk && item.content.indexOf('http') === 0;
+    var isImg = fileContentOk && (item.content.indexOf('data:image/') === 0 || (isStorageUrl && isImageExt(meta.ext)));
+    var isVideo = fileContentOk && isStorageUrl && isVideoExt(meta.ext);
     header = '<span class="card-lang lang-file">ARCHIVO</span><span class="card-filename">' + fnEsc + '</span><div class="card-actions"><button class="card-btn" onclick="copyFileCard(\'' + id + '\')" title="Copiar nombre">⧉</button><button class="card-btn danger" onclick="removeCard(\'' + id + '\')" title="Eliminar">✕</button></div>';
-    body = isImg
-      ? '<div style="text-align:center;padding:8px 0"><img class="card-image-preview" alt=""/><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || 'png').toUpperCase() + '</div></div>'
-      : '<div style="text-align:center;padding:8px 0"><span class="file-icon">' + getFileIcon(meta.ext) + '</span><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
-    footer = '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadFileCard(\'' + id + '\')">↓ descargar</button>';
+    if (isImg) {
+      body = '<div style="text-align:center;padding:8px 0"><img class="card-image-preview" alt=""/><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || 'png').toUpperCase() + '</div></div>';
+    } else if (isVideo) {
+      body = '<div style="text-align:center;padding:8px 0"><video class="card-video-preview" controls playsinline></video><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
+    } else {
+      body = '<div style="text-align:center;padding:8px 0"><span class="file-icon">' + getFileIcon(meta.ext) + '</span><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size || 0) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
+    }
+    footer = fileContentOk
+      ? '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><button class="card-download" onclick="downloadFileCard(\'' + id + '\')">↓ descargar</button>'
+      : '<span class="card-time">Por ' + userNameEsc + ' · ' + createdAt + '</span><span class="card-file-unavailable">Agregado en otro dispositivo. No descargable aquí.</span>';
   } else if (item.type === 'link') {
     var urlEsc = esc(item.content || '');
     var urlShort = (item.content && item.content.length > 50) ? item.content.substring(0, 47) + '...' : (item.content || '');
@@ -687,9 +731,14 @@ function appendCardFromItem(item) {
   div.style.top = top;
   div.style.display = meta.space === currentSpace ? '' : 'none';
   div.innerHTML = '<div class="card-header">' + header + '</div><div class="card-body">' + body + '</div><div class="card-footer">' + footer + '</div>';
-  if (item.type === 'file' && item.content && typeof item.content === 'string' && item.content.indexOf('data:image/') === 0) {
-    var imgEl = div.querySelector('.card-image-preview');
-    if (imgEl) imgEl.src = item.content;
+  if (item.type === 'file' && item.content && typeof item.content === 'string' && item.content.indexOf('...[truncado]') === -1) {
+    if (item.content.indexOf('data:image/') === 0 || (item.content.indexOf('http') === 0 && isImageExt(meta.ext))) {
+      var imgEl = div.querySelector('.card-image-preview');
+      if (imgEl) imgEl.src = item.content;
+    } else if (item.content.indexOf('http') === 0 && isVideoExt(meta.ext)) {
+      var videoEl = div.querySelector('.card-video-preview');
+      if (videoEl) videoEl.src = item.content;
+    }
   }
   inner.appendChild(div);
   makeDraggable(div, function(draggedId) {
@@ -698,6 +747,7 @@ function appendCardFromItem(item) {
   return true;
 }
 
+// Carga las tarjetas guardadas en localStorage al iniciar
 function loadCardsFromStorage() {
   try {
     var raw = localStorage.getItem(CARDS_STORAGE_KEY);
@@ -726,6 +776,7 @@ function loadCardsFromStorage() {
   }
 }
 
+// Ordena las tarjetas del espacio actual en columnas por usuario
 function organizeCardsInGrid() {
   const inner = document.getElementById('canvasInner');
   const cardEls = [...inner.querySelectorAll('.card')].filter(el => el.dataset.space === currentSpace);
@@ -757,6 +808,7 @@ function organizeCardsInGrid() {
   showToast('Tarjetas organizadas por usuario');
 }
 
+// Crea una tarjeta nueva en el lienzo (codigo, enlace o archivo)
 function createCard(content, type, meta) {
   if (!meta) meta = {};
   if (!cards) cards = (typeof window !== 'undefined' && window.cards) ? window.cards : {};
@@ -816,7 +868,8 @@ function createCard(content, type, meta) {
   } else {
     const icon = getFileIcon(meta.ext);
     const fnEsc = esc(meta.name);
-    var isImage = typeof content === 'string' && content.indexOf('data:image/') === 0;
+    var isImage = typeof content === 'string' && (content.indexOf('data:image/') === 0 || (content.indexOf('http') === 0 && isImageExt(meta.ext)));
+    var isVideo = typeof content === 'string' && content.indexOf('http') === 0 && isVideoExt(meta.ext);
     header = `
       <span class="card-lang lang-file">ARCHIVO</span>
       <span class="card-filename">${fnEsc}</span>
@@ -824,13 +877,17 @@ function createCard(content, type, meta) {
         <button class="card-btn" onclick="copyFileCard('${id}')" title="Copiar nombre">⧉</button>
         <button class="card-btn danger" onclick="removeCard('${id}')" title="Eliminar">✕</button>
       </div>`;
-    body = isImage
-      ? '<div style="text-align:center;padding:8px 0"><img class="card-image-preview" id="img-' + id + '" alt=""/><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size) + ' · .' + (meta.ext || 'png').toUpperCase() + '</div></div>'
-      : `
+    if (isImage) {
+      body = '<div style="text-align:center;padding:8px 0"><img class="card-image-preview" id="img-' + id + '" alt=""/><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size) + ' · .' + (meta.ext || 'png').toUpperCase() + '</div></div>';
+    } else if (isVideo) {
+      body = '<div style="text-align:center;padding:8px 0"><video class="card-video-preview" controls playsinline></video><div class="file-meta">' + fnEsc + '<br>' + formatSize(meta.size) + ' · .' + (meta.ext || '').toUpperCase() + '</div></div>';
+    } else {
+      body = `
       <div style="text-align:center;padding:8px 0">
         <span class="file-icon">${icon}</span>
         <div class="file-meta">${fnEsc}<br>${formatSize(meta.size)} · .${(meta.ext||'').toUpperCase()}</div>
       </div>`;
+    }
     footer = `
       <span class="card-time">Por ${userNameEsc} · ${createdAt}</span>
       <button class="card-download" onclick="downloadFileCard('${id}')">↓ descargar</button>`;
@@ -841,9 +898,14 @@ function createCard(content, type, meta) {
     <div class="card-body">${body}</div>
     <div class="card-footer">${footer}</div>`;
 
-  if (type === 'file' && typeof content === 'string' && content.indexOf('data:image/') === 0) {
-    var imgEl = div.querySelector('.card-image-preview');
-    if (imgEl) imgEl.src = content;
+  if (type === 'file' && typeof content === 'string') {
+    if (content.indexOf('data:image/') === 0 || (content.indexOf('http') === 0 && isImageExt(meta.ext))) {
+      var imgEl = div.querySelector('.card-image-preview');
+      if (imgEl) imgEl.src = content;
+    } else if (content.indexOf('http') === 0 && isVideoExt(meta.ext)) {
+      var videoEl = div.querySelector('.card-video-preview');
+      if (videoEl) videoEl.src = content;
+    }
   }
   inner.appendChild(div);
   makeDraggable(div, function(draggedId) {
@@ -860,6 +922,7 @@ function createCard(content, type, meta) {
   return id;
 }
 
+// Aplica colores de sintaxis al codigo segun el lenguaje
 function highlightCode(code, lang) {
   let h = esc(code);
   if (lang==='sql') {
@@ -881,15 +944,23 @@ function highlightCode(code, lang) {
   return h;
 }
 
+// Escapa HTML para mostrar texto sin ejecutar etiquetas
 function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function getFileIcon(ext) {
   return {pdf:'📄',png:'🖼️',jpg:'🖼️',jpeg:'🖼️',mp4:'🎬',mp3:'🎵',zip:'📦',rar:'📦',xls:'📊',xlsx:'📊',doc:'📝',docx:'📝',csv:'📋',gif:'🎞️',svg:'🖌️',psd:'🎨'}[ext.toLowerCase()]||'📁';
 }
+function isImageExt(ext) {
+  return ext && ['png','jpg','jpeg','gif','webp','bmp','svg'].indexOf(String(ext).toLowerCase()) !== -1;
+}
+function isVideoExt(ext) {
+  return ext && ['mp4','webm','ogg','mov'].indexOf(String(ext).toLowerCase()) !== -1;
+}
 function formatSize(b) {
   if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(1)+' MB';
 }
 
+// Elimina la tarjeta del DOM y de cards; en Supabase borra el registro
 function removeCard(id) {
   var el = document.getElementById(id);
   if (el) {
@@ -908,6 +979,7 @@ function removeCard(id) {
     }, 200);
   }
 }
+// Copia el contenido de la tarjeta al portapapeles
 function copyCard(id) {
   const c = cards[id];
   if (!c || !c.content) return;
@@ -918,6 +990,7 @@ function copyCard(id) {
     copyFallback(text);
   }
 }
+// Copia texto al portapapeles cuando la API moderna no esta disponible
 function copyFallback(text) {
   const ta = document.createElement('textarea');
   ta.value = text;
@@ -932,6 +1005,7 @@ function copyFallback(text) {
   }
   document.body.removeChild(ta);
 }
+// Descarga el contenido de una tarjeta de codigo como archivo
 function downloadCard(id) {
   const c = cards[id];
   if (!c || c.type !== 'code') return;
@@ -944,6 +1018,7 @@ function downloadCard(id) {
   triggerCelebration();
   showToast('↓ ' + fn);
 }
+// Copia el nombre del archivo al portapapeles
 function copyFileCard(id) {
   const c = cards[id];
   if (!c || c.type !== 'file') return;
@@ -954,11 +1029,17 @@ function copyFileCard(id) {
     copyFallback(text);
   }
 }
+// Descarga el archivo de la tarjeta (imagen, video u otro)
 function downloadFileCard(id) {
   const c = cards[id];
-  if (!c || c.type !== 'file' || !c.content) return;
+  if (!c || c.type !== 'file') return;
+  if (!c.content || (typeof c.content === 'string' && c.content.indexOf('...[truncado]') !== -1)) {
+    showToast('Este archivo se agregó en otro dispositivo y no está disponible para descargar.');
+    return;
+  }
   const fn = c.meta.name || 'archivo';
   const isDataUrl = typeof c.content === 'string' && c.content.indexOf('data:') === 0;
+  const isHttpUrl = typeof c.content === 'string' && (c.content.indexOf('http://') === 0 || c.content.indexOf('https://') === 0);
   if (isDataUrl) {
     fetch(c.content).then(function(res) { return res.blob(); }).then(function(blob) {
       var url = URL.createObjectURL(blob);
@@ -976,6 +1057,25 @@ function downloadFileCard(id) {
       a.click();
       showToast('↓ ' + fn);
     });
+  } else if (isHttpUrl) {
+    fetch(c.content, { mode: 'cors' }).then(function(res) { return res.blob(); }).then(function(blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = fn;
+      a.click();
+      URL.revokeObjectURL(url);
+      triggerCelebration();
+      showToast('↓ ' + fn);
+    }).catch(function() {
+      var a = document.createElement('a');
+      a.href = c.content;
+      a.download = fn;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.click();
+      showToast('↓ ' + fn);
+    });
   } else {
     var a = document.createElement('a');
     a.href = c.content;
@@ -985,6 +1085,7 @@ function downloadFileCard(id) {
     showToast('↓ ' + fn);
   }
 }
+// Borra todas las tarjetas del espacio actual y las guarda para poder deshacer
 function clearAll() {
   if (!cards) return;
   clearedCardsBuffer[currentSpace] = [];
@@ -1018,6 +1119,7 @@ function clearAll() {
     showToast('No hay tarjetas en este pizarrón');
 }
 
+// Restaura las tarjetas que se borraron con Limpiar
 function restoreCleared() {
   const buf = clearedCardsBuffer[currentSpace] || [];
   if (!buf.length) return;
@@ -1037,7 +1139,7 @@ function restoreCleared() {
   showToast('↩ Restaurado');
 }
 
-// ========== DRAG (mouse + touch para responsive) ==========
+// Hace la tarjeta arrastrable con raton y tactil; al soltar llama onDragEnd
 function makeDraggable(el, onDragEnd) {
   var sx, sy, ox, oy;
   function getXY(e) {
@@ -1075,7 +1177,7 @@ function makeDraggable(el, onDragEnd) {
   el.addEventListener('touchstart', start, { passive: false });
 }
 
-// ========== FILE DROP Y EXPLORADOR ==========
+// Zona de arrastrar y soltar archivos y selector de archivos
 var canvasEl = document.getElementById('canvas');
 var dropOv   = document.getElementById('dropOverlay');
 const textExts = ['sql','jsx','js','ts','tsx','py','css','html','json','txt','md','xml','yaml','yml','sh','rb','go','rs','php','c','cpp','java'];
@@ -1103,7 +1205,7 @@ if (canvasEl && dropOv) {
   });
 }
 
-// Menú contextual (clic derecho) en el canvas: Pegar y Subir archivo
+// Menu al clic derecho en el lienzo: Pegar y Subir archivo
 if (canvasEl) {
   canvasEl.addEventListener('contextmenu', function(e) {
     e.preventDefault();
@@ -1136,6 +1238,7 @@ if (canvasEl) {
   });
 }
 
+// Agrega un archivo al pizarron: si es texto/codigo crea tarjeta de codigo, sino de archivo
 function addFileToBoard(file) {
   if (!file || !file.name) return;
   try {
@@ -1160,20 +1263,49 @@ function addFileToBoard(file) {
       r.onerror = function() { showToast('No se pudo leer ' + file.name); };
       r.readAsText(file);
     } else {
-      var fr = new FileReader();
-      fr.onload = function(ev) {
-        try {
-          createCard(ev.target.result, 'file', { name: file.name, ext: ext, size: file.size });
-          tryGrowPetFromShare();
-          saveCardsToStorage();
-          showToast('📁 ' + file.name);
-        } catch (err) {
-          console.warn(err);
-          showToast('Error al agregar ' + file.name);
-        }
-      };
-      fr.onerror = function() { showToast('No se pudo leer ' + file.name); };
-      fr.readAsDataURL(file);
+      var isImageOrVideo = file.type && (file.type.indexOf('image/') === 0 || file.type.indexOf('video/') === 0);
+      if (supabaseClient && isImageOrVideo) {
+        uploadFileToStorage(file, function(publicUrl) {
+          if (publicUrl) {
+            try {
+              createCard(publicUrl, 'file', { name: file.name, ext: ext, size: file.size, storageUrl: true });
+              tryGrowPetFromShare();
+              saveCardsToStorage();
+              showToast('✓ ' + file.name + ' (otros podrán descargarlo)');
+            } catch (err) {
+              console.warn(err);
+              showToast('Error al agregar ' + file.name);
+            }
+          } else {
+            var fr = new FileReader();
+            fr.onload = function(ev) {
+              try {
+                createCard(ev.target.result, 'file', { name: file.name, ext: ext, size: file.size });
+                tryGrowPetFromShare();
+                saveCardsToStorage();
+                showToast('📁 ' + file.name);
+              } catch (err) { console.warn(err); showToast('Error al agregar ' + file.name); }
+            };
+            fr.onerror = function() { showToast('No se pudo leer ' + file.name); };
+            fr.readAsDataURL(file);
+          }
+        });
+      } else {
+        var fr = new FileReader();
+        fr.onload = function(ev) {
+          try {
+            createCard(ev.target.result, 'file', { name: file.name, ext: ext, size: file.size });
+            tryGrowPetFromShare();
+            saveCardsToStorage();
+            showToast('📁 ' + file.name);
+          } catch (err) {
+            console.warn(err);
+            showToast('Error al agregar ' + file.name);
+          }
+        };
+        fr.onerror = function() { showToast('No se pudo leer ' + file.name); };
+        fr.readAsDataURL(file);
+      }
     }
   } catch (err) {
     console.warn(err);
@@ -1181,6 +1313,7 @@ function addFileToBoard(file) {
   }
 }
 
+// Abre el selector de archivos del sistema
 function openFilePicker() {
   document.getElementById('fileInput').click();
 }
@@ -1199,7 +1332,7 @@ if (fileInputEl) {
   });
 }
 
-// ========== PASTE ==========
+// Lee el portapapeles y crea una tarjeta; si no hay API abre el prompt de texto
 function pasteFromClipboard() {
   if (!navigator.clipboard || !navigator.clipboard.readText) {
     openTextInput();
@@ -1237,17 +1370,44 @@ document.addEventListener('paste', function(e) {
           const file = item.getAsFile();
           if (file) {
             e.preventDefault();
-            const fr = new FileReader();
-            fr.onload = function(ev) {
-              try {
-                triggerPetPasteAnimation();
-                createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: (file.name||'').split('.').pop()||'png', size: file.size });
-                tryGrowPetFromShare();
-                saveCardsToStorage();
-                showToast('📁 Imagen pegada');
-              } catch (err) { showToast('Error al pegar imagen'); }
-            };
-            fr.readAsDataURL(file);
+            var ext = (file.name || '').split('.').pop() || 'png';
+            if (supabaseClient) {
+              uploadFileToStorage(file, function(publicUrl) {
+                if (publicUrl) {
+                  try {
+                    triggerPetPasteAnimation();
+                    createCard(publicUrl, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size, storageUrl: true });
+                    tryGrowPetFromShare();
+                    saveCardsToStorage();
+                    showToast('📁 Imagen pegada (otros podrán descargarla)');
+                  } catch (err) { showToast('Error al pegar imagen'); }
+                } else {
+                  var fr = new FileReader();
+                  fr.onload = function(ev) {
+                    try {
+                      triggerPetPasteAnimation();
+                      createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size });
+                      tryGrowPetFromShare();
+                      saveCardsToStorage();
+                      showToast('📁 Imagen pegada');
+                    } catch (err) { showToast('Error al pegar imagen'); }
+                  };
+                  fr.readAsDataURL(file);
+                }
+              });
+            } else {
+              const fr = new FileReader();
+              fr.onload = function(ev) {
+                try {
+                  triggerPetPasteAnimation();
+                  createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size });
+                  tryGrowPetFromShare();
+                  saveCardsToStorage();
+                  showToast('📁 Imagen pegada');
+                } catch (err) { showToast('Error al pegar imagen'); }
+              };
+              fr.readAsDataURL(file);
+            }
             return;
           }
         }
@@ -1284,9 +1444,9 @@ document.addEventListener('paste', function(e) {
     console.warn('Paste error:', err);
     showToast('No se pudo pegar. Usa el botón Pegar o +.');
   }
-}, true);
+  }, true);
 
-// ========== TEXT INPUT ==========
+// Abre un cuadro para pegar texto manualmente cuando no hay portapapeles
 function openTextInput() {
   const text=prompt('Pega tu código aquí:');
   if(text&&text.trim()){
@@ -1298,7 +1458,7 @@ function openTextInput() {
   }
 }
 
-// ========== MANUAL / AYUDA ==========
+// Abre el manual de ayuda con el nombre del usuario
 function openManual() {
   const name = (localStorage.getItem(USERNAME_KEY) || 'Usuario').trim() || 'Usuario';
   const el = document.getElementById('manualUserName');
@@ -1313,7 +1473,7 @@ function closeManualIfBackdrop(e) {
   if (e.target.id === 'manualOverlay') closeManual();
 }
 
-// ========== SHARE (permanent link) ==========
+// Copia el enlace de la sesion al portapapeles para compartir
 function shareSession() {
   var url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID + '&created=' + SESSION_START;
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1326,7 +1486,7 @@ function shareSession() {
   }
 }
 
-// ========== ABRIR ENLACE (elegir cómo abrirlo) ==========
+// Muestra un modal para abrir el enlace en nueva pestaña o copiarlo
 var linkModalCurrentUrl = '';
 function openLinkWithChoice(url) {
   if (!url || typeof url !== 'string') return;
@@ -1356,7 +1516,7 @@ function openLinkWithChoice(url) {
 }
 if (typeof window !== 'undefined') window.openLinkWithChoice = openLinkWithChoice;
 
-// ========== TOAST ==========
+// Confetti al descargar algo
 function triggerCelebration() {
   const colors = ['#22aaff', '#ff4466', '#4488ff', '#ffdc00', '#ff9632', '#c864ff', '#64b4ff'];
   const count = 28;
@@ -1374,6 +1534,7 @@ function triggerCelebration() {
   }
 }
 
+// Muestra un mensaje temporal en la parte inferior
 function showToast(msg, dur=3000) {
   const t=document.getElementById('toast');
   t.textContent=msg;
@@ -1382,6 +1543,7 @@ function showToast(msg, dur=3000) {
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),dur);
 }
+// Toast con boton Deshacer que ejecuta onUndo al hacer clic
 function showToastWithUndo(msg, onUndo, dur=6000) {
   const t=document.getElementById('toast');
   t.innerHTML='';
@@ -1396,7 +1558,7 @@ function showToastWithUndo(msg, onUndo, dur=6000) {
   setTimeout(()=>{ t.classList.remove('show'); t.innerHTML=''; }, dur);
 }
 
-// ========== SUPABASE REALTIME (presencia + sync tarjetas) ==========
+// Muestra u oculta el indicador de conexion en vivo
 function setLiveIndicator(connected) {
   var el = document.getElementById('liveIndicator');
   var sep = document.getElementById('liveSep');
@@ -1404,6 +1566,7 @@ function setLiveIndicator(connected) {
   if (sep) sep.style.display = connected ? '' : 'none';
 }
 
+// Actualiza la lista de usuarios en linea desde el estado de presencia de Supabase
 function updatePresenceUI() {
   var elCount = document.getElementById('userCount');
   var elLabel = document.getElementById('userCountLabel');
@@ -1437,6 +1600,7 @@ function updatePresenceUI() {
   }
 }
 
+// Aplica una tarjeta recibida por Supabase Realtime al lienzo local
 function applyCardFromRemote(row) {
   if (!row || !row.card_id) return;
   if (cards[row.card_id]) return;
@@ -1455,6 +1619,7 @@ function applyCardFromRemote(row) {
   showToast('✓ Tarjeta recibida en vivo', 2000);
 }
 
+// Carga todas las tarjetas de la sala desde Supabase y las dibuja
 function loadCardsFromSupabase() {
   var inner = document.getElementById('canvasInner');
   if (!inner || !supabaseClient) return Promise.resolve();
@@ -1475,6 +1640,7 @@ function loadCardsFromSupabase() {
   });
 }
 
+// Conecta al canal de Supabase: presencia y cambios en la tabla de tarjetas
 function initSupabaseRealtime() {
   if (!supabaseClient) return;
   var channelName = 'room-' + SESSION_ID.replace(/[^a-zA-Z0-9-_]/g, '-');
@@ -1543,14 +1709,19 @@ function initSupabaseRealtime() {
     var leftPos = el ? (parseInt(el.style.left, 10) || 0) : 0;
     var topPos = el ? (parseInt(el.style.top, 10) || 0) : 0;
     var content = cards[id].content;
-    if (typeof content === 'string' && content.length > MAX_SYNC_CONTENT)
+    var meta = Object.assign({}, cards[id].meta || {});
+    if (cards[id].type === 'file' && typeof content === 'string' && content.length > MAX_SYNC_CONTENT) {
+      content = null;
+      meta.remoteOnly = true;
+    } else if (typeof content === 'string' && content.length > MAX_SYNC_CONTENT) {
       content = content.substr(0, MAX_SYNC_CONTENT) + '...[truncado]';
+    }
     supabaseClient.from('pizarron_cards').upsert({
       room_id: SESSION_ID,
       card_id: id,
       content: content,
       type: cards[id].type,
-      meta: cards[id].meta || {},
+      meta: meta,
       left_pos: leftPos,
       top_pos: topPos
     }, { onConflict: 'room_id,card_id' }).then(function(r) {
@@ -1571,7 +1742,7 @@ function initSupabaseRealtime() {
   };
 }
 
-// ========== ON JOIN ==========
+// Mensaje al unirse por enlace compartido
 if (session.isJoining) {
   setTimeout(function() {
     showToast('✓ Sala compartida. Verás en vivo lo que cualquiera pegue aquí.');
@@ -1588,7 +1759,7 @@ if (session.isJoining) {
   }, 1500);
 }
 
-// ========== CARGAR GUARDADO O DEMO ==========
+// Inicializa tarjetas: con Supabase usa tiempo real, sino carga desde localStorage
 function initCards() {
   var inner = document.getElementById('canvasInner');
   if (!inner) {

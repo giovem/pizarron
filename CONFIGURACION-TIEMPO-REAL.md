@@ -17,6 +17,12 @@ Para que en **Netlify** aparezca "● En vivo" y varios usuarios vean al instant
 - **Run** (o Ctrl+Enter).
 - Si sale algo como "already member" o "already exists", está bien; sigue.
 
+### 1.2b Storage para imágenes y vídeos (opcional)
+Para que cuando un usuario suba una imagen o un vídeo, **otros usuarios en distintos dispositivos puedan verla y descargarla**, crea el bucket de Storage:
+- **SQL Editor** → **New query**.
+- Copia y pega todo el contenido de `supabase-storage.sql`.
+- **Run**. Así se crea el bucket `pizarron-files` (público, lectura para todos, subida con anon key).
+
 ### 1.3 Comprobar que Realtime está activo para la tabla
 - Menú izquierdo: **Database** → **Replication** (o **Publications**).
 - En la publicación `supabase_realtime` debe aparecer la tabla **`pizarron_cards`**.

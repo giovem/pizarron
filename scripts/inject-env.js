@@ -1,6 +1,6 @@
 /**
  * Sustituye en pizarron.html los placeholders por variables de entorno.
- * Uso: en Netlify define SUPABASE_URL y SUPABASE_ANON_KEY; el build (netlify.toml) ejecuta este script.
+ * Uso: en Cloudflare Pages define SUPABASE_URL y SUPABASE_ANON_KEY; el build ejecuta este script.
  */
 const fs = require('fs');
 const path = require('path');

@@ -1,0 +1,21 @@
+# No subir al deploy de Cloudflare (solo archivos necesarios para el sitio)
+.git
+.gitignore
+.assetsignore
+.env
+.env.*
+!.env.example
+node_modules
+config.supabase.js
+data
+scripts
+*.md
+wrangler.toml
+.vscode
+.cursor
+.DS_Store
+Thumbs.db
+*.log
+*.sql
+package.json
+package-lock.json

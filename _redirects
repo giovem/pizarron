@@ -1,0 +1,2 @@
+# Redirect raíz a pizarron.html (Cloudflare Pages)
+/ /pizarron.html 200

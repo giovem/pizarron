@@ -1,7 +1,7 @@
-# Cloudflare: desplegar el directorio actual como sitio estático (Pages/Assets).
-# El build (inject-env.js) ya modificó pizarron.html en este directorio.
-name = "pizarron"
+# Cloudflare Workers: sitio estático (assets). Build: npm run build → inject-env.js
+name = "pizarronepem"
 compatibility_date = "2026-02-19"
 
 [assets]
 directory = "."
+# Qué no subir: .assetsignore (mismo formato que .gitignore)

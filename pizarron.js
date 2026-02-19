@@ -168,6 +168,10 @@ function setUsername(newName) {
   var n = (newName || '').trim().slice(0, 40) || 'Anónimo';
   localStorage.setItem(USERNAME_KEY, n);
   updateUsernameDisplay();
+  if (supabaseChannel) {
+    supabaseChannel.track({ user_id: PRESENCE_USER_ID, user_name: n });
+    updatePresenceUI();
+  }
 }
 function promptUsername() {
   var current = (localStorage.getItem(USERNAME_KEY) || 'Anónimo').trim() || '';

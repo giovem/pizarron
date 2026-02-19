@@ -520,6 +520,23 @@ function triggerPetPasteAnimation() {
   }
 }
 
+// Gussi saluda al usuario cuando pega o sube algo
+function triggerPetGreetUser() {
+  if (typeof petJump !== 'undefined') petJump = 22;
+  if (typeof petMood !== 'undefined') petMood = 0.95;
+  var name = (localStorage.getItem(USERNAME_KEY) || 'Anónimo').trim() || 'Anónimo';
+  var container = document.getElementById('petContainer');
+  if (container) {
+    var bubble = document.createElement('div');
+    bubble.className = 'pet-greeting';
+    bubble.textContent = '¡Hola, ' + name + '!';
+    container.appendChild(bubble);
+    setTimeout(function() {
+      if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+    }, 2500);
+  }
+}
+
 // Sube nivel a la mascota y muestra mensaje flotante
 function growPet(msg) {
   petMood = 1.0;
@@ -1254,6 +1271,7 @@ function addFileToBoard(file) {
           createCard(content, 'code', { detected: detected, filename: file.name });
           tryGrowPetFromShare();
           saveCardsToStorage();
+          triggerPetGreetUser();
           showToast('✓ ' + file.name);
         } catch (err) {
           console.warn(err);
@@ -1271,6 +1289,7 @@ function addFileToBoard(file) {
               createCard(publicUrl, 'file', { name: file.name, ext: ext, size: file.size, storageUrl: true });
               tryGrowPetFromShare();
               saveCardsToStorage();
+              triggerPetGreetUser();
               showToast('✓ ' + file.name + ' (otros podrán descargarlo)');
             } catch (err) {
               console.warn(err);
@@ -1283,6 +1302,7 @@ function addFileToBoard(file) {
                 createCard(ev.target.result, 'file', { name: file.name, ext: ext, size: file.size });
                 tryGrowPetFromShare();
                 saveCardsToStorage();
+                triggerPetGreetUser();
                 showToast('📁 ' + file.name);
               } catch (err) { console.warn(err); showToast('Error al agregar ' + file.name); }
             };
@@ -1297,6 +1317,7 @@ function addFileToBoard(file) {
             createCard(ev.target.result, 'file', { name: file.name, ext: ext, size: file.size });
             tryGrowPetFromShare();
             saveCardsToStorage();
+            triggerPetGreetUser();
             showToast('📁 ' + file.name);
           } catch (err) {
             console.warn(err);
@@ -1342,6 +1363,7 @@ function pasteFromClipboard() {
     if (!text || !text.trim()) { showToast('El portapapeles está vacío'); return; }
     lastActivityTime = Date.now();
     triggerPetPasteAnimation();
+    triggerPetGreetUser();
     try {
       const detected = detectSyntax(text);
       const filename = generateFilename(detected);
@@ -1376,6 +1398,7 @@ document.addEventListener('paste', function(e) {
                 if (publicUrl) {
                   try {
                     triggerPetPasteAnimation();
+                    triggerPetGreetUser();
                     createCard(publicUrl, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size, storageUrl: true });
                     tryGrowPetFromShare();
                     saveCardsToStorage();
@@ -1386,6 +1409,7 @@ document.addEventListener('paste', function(e) {
                   fr.onload = function(ev) {
                     try {
                       triggerPetPasteAnimation();
+                      triggerPetGreetUser();
                       createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size });
                       tryGrowPetFromShare();
                       saveCardsToStorage();
@@ -1400,6 +1424,7 @@ document.addEventListener('paste', function(e) {
               fr.onload = function(ev) {
                 try {
                   triggerPetPasteAnimation();
+                  triggerPetGreetUser();
                   createCard(ev.target.result, 'file', { name: file.name || 'imagen.png', ext: ext, size: file.size });
                   tryGrowPetFromShare();
                   saveCardsToStorage();
@@ -1418,6 +1443,7 @@ document.addEventListener('paste', function(e) {
       e.preventDefault();
       lastActivityTime = Date.now();
       triggerPetPasteAnimation();
+      triggerPetGreetUser();
       var trimmed = text.trim();
       var singleLine = trimmed.split(/\r?\n/).length === 1;
       var looksLikeUrl = /^https?:\/\/\S+$/i.test(trimmed);
@@ -1454,6 +1480,7 @@ function openTextInput() {
     const filename=generateFilename(detected);
     createCard(text,'code',{detected,filename});
     tryGrowPetFromShare();
+    triggerPetGreetUser();
     showToast(`✓ ${detected.label} → ${filename}`);
   }
 }

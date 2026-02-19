@@ -1290,6 +1290,8 @@ if (canvasEl) {
 // Agrega un archivo al pizarron: si es texto/codigo crea tarjeta de codigo, sino de archivo
 function addFileToBoard(file) {
   if (!file || !file.name) return;
+  // Asegurar nombre del usuario antes de procesar, para que Gussi salude con su nombre al subir
+  if (typeof getOrPromptUsername === 'function') getOrPromptUsername();
   try {
     var ext = (file.name.split('.').pop() || '').toLowerCase();
     if (textExts.indexOf(ext) !== -1) {
@@ -1313,8 +1315,8 @@ function addFileToBoard(file) {
       r.onerror = function() { showToast('No se pudo leer ' + file.name); };
       r.readAsText(file);
     } else {
-      var isImageOrVideo = file.type && (file.type.indexOf('image/') === 0 || file.type.indexOf('video/') === 0);
-      if (useLocalBackend && isImageOrVideo) {
+      // Subir cualquier archivo a Storage/backend para que todos puedan descargarlo (no solo imagen/vídeo)
+      if (useLocalBackend) {
         uploadFileToLocal(file, function(publicUrl) {
           if (publicUrl) {
             try {
@@ -1322,7 +1324,7 @@ function addFileToBoard(file) {
               tryGrowPetFromShare();
               saveCardsToStorage();
               triggerPetGreetUser();
-              showToast('✓ ' + file.name + ' (otros podrán descargarlo)');
+              showToast('✓ ' + file.name + ' (todos podrán descargarlo)');
             } catch (err) {
               console.warn(err);
               showToast('Error al agregar ' + file.name);
@@ -1342,7 +1344,7 @@ function addFileToBoard(file) {
             fr.readAsDataURL(file);
           }
         });
-      } else if (supabaseClient && isImageOrVideo) {
+      } else if (supabaseClient) {
         uploadFileToStorage(file, function(publicUrl) {
           if (publicUrl) {
             try {
@@ -1350,7 +1352,7 @@ function addFileToBoard(file) {
               tryGrowPetFromShare();
               saveCardsToStorage();
               triggerPetGreetUser();
-              showToast('✓ ' + file.name + ' (otros podrán descargarlo)');
+              showToast('✓ ' + file.name + ' (todos podrán descargarlo)');
             } catch (err) {
               console.warn(err);
               showToast('Error al agregar ' + file.name);

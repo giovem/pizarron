@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5, user-scalable=yes">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -28,6 +28,7 @@
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   body {
     background: var(--bg);
@@ -35,8 +36,11 @@
     font-family: 'Syne', sans-serif;
     min-height: 100vh;
     min-height: 100dvh;
+    min-height: 100svh;
     overflow: hidden;
     position: relative;
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
   }
 
   body::before {
@@ -55,12 +59,15 @@
     position: fixed;
     top: 0; left: 0; bottom: 0;
     width: 56px;
+    padding-left: env(safe-area-inset-left, 0);
     background: var(--surface);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px 0;
+    padding-top: max(12px, env(safe-area-inset-top, 0));
+    padding-right: 0;
+    padding-bottom: 12px;
     gap: 4px;
     z-index: 1001;
   }
@@ -126,14 +133,19 @@
     position: fixed;
     top: 0; left: 56px; right: 0;
     height: 52px;
+    min-height: 52px;
+    padding-top: env(safe-area-inset-top, 0);
     background: rgba(30,32,40,0.97);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    padding: 0 20px;
+    padding-right: max(20px, env(safe-area-inset-right, 0));
+    padding-left: 20px;
+    padding-bottom: 0;
     gap: 14px;
     z-index: 1000;
     backdrop-filter: blur(12px);
+    flex-wrap: wrap;
   }
 
   .logo {
@@ -305,10 +317,14 @@
 
   .canvas {
     position: fixed;
-    top: 52px; left: 56px; right: 0; bottom: 0;
+    top: calc(52px + env(safe-area-inset-top, 0));
+    left: 56px;
+    right: 0;
+    bottom: 0;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
     z-index: 1;
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
   .canvas-inner {
     position: relative;
@@ -316,11 +332,15 @@
     min-height: 100%;
     box-sizing: border-box;
     padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0));
   }
 
   .drop-overlay {
     position: fixed;
-    top: 52px; left: 56px; right: 0; bottom: 0;
+    top: calc(52px + env(safe-area-inset-top, 0));
+    left: 56px;
+    right: 0;
+    bottom: 0;
     border: 3px dashed var(--accent);
     background: rgba(34,170,255,0.06);
     display: flex;
@@ -346,7 +366,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     min-width: 240px;
-    max-width: 420px;
+    max-width: min(420px, calc(100vw - 32px));
     box-shadow: 0 6px 24px rgba(0,0,0,0.25);
     cursor: grab;
     user-select: none;
@@ -733,7 +753,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 24px;
+    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s, visibility 0.2s;
@@ -747,9 +767,10 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
-    max-width: 420px;
+    max-width: min(420px, calc(100vw - 48px));
     width: 100%;
     max-height: 85vh;
+    max-height: 85dvh;
     overflow-y: auto;
     box-shadow: 0 24px 64px rgba(0,0,0,0.5);
     transform: scale(0.95);
@@ -812,15 +833,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   }
   .link-modal {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 20px;
-    max-width: 420px;
+    max-width: min(420px, calc(100vw - 40px));
     width: 100%;
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
+    overflow-y: auto;
     box-shadow: 0 24px 64px rgba(0,0,0,0.4);
   }
   .link-modal-title {
@@ -928,6 +952,7 @@
     .topbar {
       left: 0;
       padding: 8px 10px;
+      padding-top: max(8px, env(safe-area-inset-top, 0));
       gap: 8px;
       min-height: 48px;
       height: auto;
@@ -959,10 +984,9 @@
     }
     .canvas,
     .drop-overlay {
-      top: 76px;
+      top: calc(76px + env(safe-area-inset-top, 0));
       left: 0;
       right: 0;
-      bottom: 56px;
       bottom: calc(56px + env(safe-area-inset-bottom, 0px));
     }
     .canvas-inner {
@@ -1055,7 +1079,6 @@
     .sidebar-btn { width: 42px; height: 42px; min-width: 42px; font-size: 18px; }
     .canvas,
     .drop-overlay {
-      bottom: 54px;
       bottom: calc(54px + env(safe-area-inset-bottom, 0px));
     }
     .paste-hint { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
@@ -1078,12 +1101,51 @@
   /* Orientación horizontal en móvil: más altura para canvas */
   @media (max-width: 768px) and (orientation: landscape) {
     .topbar-break { display: none; }
-    .topbar { flex-wrap: nowrap; min-height: 44px; height: 48px; }
+    .topbar { flex-wrap: nowrap; min-height: 44px; height: 48px; padding-top: env(safe-area-inset-top, 0); }
     .logo { flex-basis: auto; max-width: 120px; }
     .sidebar { height: 48px; }
-    .canvas, .drop-overlay { top: 48px; bottom: 48px; bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+    .canvas, .drop-overlay { top: calc(48px + env(safe-area-inset-top, 0)); bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
     .pet-container { bottom: calc(48px + 8px + env(safe-area-inset-bottom, 0px)); }
     .new-card-btn, .manual-btn { bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+  }
+
+  /* Pantallas muy pequeñas (ej. 320px–360px) */
+  @media (max-width: 360px) {
+    .logo { font-size: 12px; max-width: 130px; }
+    .topbar .session-id#spaceLabel,
+    .topbar .session-id#sessionId { max-width: 48px; font-size: 9px; }
+    .days-badge { font-size: 8px; padding: 2px 4px; }
+    .username-next-to-day { max-width: 48px; }
+    .topbar .btn { padding: 5px 8px; font-size: 9px; min-height: 32px; }
+    .card { min-width: 140px; max-width: calc(100vw - 12px); }
+    .card-body { max-height: 160px; }
+    .sidebar { height: 52px; padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+    .sidebar-btn { width: 40px; height: 40px; min-width: 40px; font-size: 16px; }
+    .canvas, .drop-overlay { bottom: calc(52px + env(safe-area-inset-bottom, 0px)); }
+    .paste-hint { font-size: 10px; padding: 5px 10px; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+    .new-card-btn, .manual-btn {
+      width: 40px; height: 40px;
+      bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    }
+    .pet-container {
+      width: 72px;
+      bottom: calc(52px + 6px + env(safe-area-inset-bottom, 0px));
+      padding: 4px;
+    }
+    .pet-container canvas#bugCanvas { width: 56px; height: 50px; }
+    .manual-overlay { padding: 8px; }
+    .link-modal-overlay { padding: 8px; }
+    .link-modal { padding: 12px; }
+    .drop-overlay-text { font-size: 18px; }
+    .drop-overlay-text span { font-size: 12px; }
+  }
+
+  /* Altura muy baja (ej. teclado virtual en móvil) */
+  @media (max-height: 400px) {
+    .topbar { min-height: 44px; padding-top: env(safe-area-inset-top, 0); }
+    .canvas, .drop-overlay { top: calc(44px + env(safe-area-inset-top, 0)); }
+    .manual-panel { max-height: 85vh; max-height: 85dvh; }
+    .card-body { max-height: 140px; }
   }
 </style>
 </head>

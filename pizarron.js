@@ -12,7 +12,11 @@ function getOrCreateSession() {
   var urlSes = urlParams.get('session');
   if (urlSes) {
     var stored = JSON.parse(localStorage.getItem('pz_' + urlSes) || 'null');
-    if (!stored) stored = { id: urlSes, createdAt: Date.now(), users: 0 };
+    if (!stored) {
+      var createdParam = urlParams.get('created');
+      var createdAt = (createdParam && !isNaN(parseInt(createdParam, 10))) ? parseInt(createdParam, 10) : Date.now();
+      stored = { id: urlSes, createdAt: createdAt, users: 0 };
+    }
     stored.users = (stored.users || 0) + 1;
     localStorage.setItem('pz_' + urlSes, JSON.stringify(stored));
     return { id: stored.id, createdAt: stored.createdAt, users: stored.users, isJoining: true };
@@ -40,7 +44,7 @@ if (sessionIdEl) {
   sessionIdEl.title = 'Sala: ' + SESSION_ID + ' — Clic para copiar enlace';
   sessionIdEl.style.cursor = 'pointer';
   sessionIdEl.addEventListener('click', function() {
-    var url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID;
+    var url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID + '&created=' + SESSION_START;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(function() { showToast('Enlace copiado'); }).catch(function() {});
     }
@@ -1311,7 +1315,7 @@ function closeManualIfBackdrop(e) {
 
 // ========== SHARE (permanent link) ==========
 function shareSession() {
-  var url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID;
+  var url = (location.origin || '') + (location.pathname || '/') + '?session=' + SESSION_ID + '&created=' + SESSION_START;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(function() {
       showToast('🔗 Enlace copiado. Quien abra ese enlace verá en vivo lo que se pegue aquí.');
